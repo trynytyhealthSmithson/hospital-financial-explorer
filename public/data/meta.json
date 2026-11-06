@@ -1,0 +1,75 @@
+{
+ "years": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024
+ ],
+ "ftype": {
+  "STH": "Short-term acute care",
+  "CAH": "Critical access",
+  "PH": "Psychiatric",
+  "RH": "Rehabilitation",
+  "LTCH": "Long-term care",
+  "CH": "Children's",
+  "OTH": "Other"
+ },
+ "ctrl": {
+  "np": "Nonprofit",
+  "fp": "For-profit",
+  "gov": "Government",
+  "unk": "Unknown"
+ },
+ "beds": {
+  "b1": "Under 25 beds",
+  "b2": "25 to 99 beds",
+  "b3": "100 to 299 beds",
+  "b4": "300 to 499 beds",
+  "b5": "500 or more beds"
+ },
+ "counts": {
+  "2016": {
+   "hospitals": 6107,
+   "clean": 5617
+  },
+  "2017": {
+   "hospitals": 6077,
+   "clean": 5571
+  },
+  "2018": {
+   "hospitals": 6049,
+   "clean": 5523
+  },
+  "2019": {
+   "hospitals": 6017,
+   "clean": 5486
+  },
+  "2020": {
+   "hospitals": 5990,
+   "clean": 5495
+  },
+  "2021": {
+   "hospitals": 5984,
+   "clean": 5537
+  },
+  "2022": {
+   "hospitals": 6004,
+   "clean": 5541
+  },
+  "2023": {
+   "hospitals": 6046,
+   "clean": 5502
+  },
+  "2024": {
+   "hospitals": 6026,
+   "clean": 5474
+  }
+ },
+ "county_match": 0.9773,
+ "built": "2026-11-06"
+}
