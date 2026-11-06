@@ -169,6 +169,12 @@ def main():
         r['m'], r['q'] = derive(r)
         r['rev'] = (r['npr'] or 0) + (r['oth'] or 0) if r['npr'] is not None else None
         r['cg'] = ctrl_group(r['ctrl']); r['bb'] = bed_band(r['beds'])
+        # Urban or rural by geography: Medicare CBSA codes under 100 or 999xx are a state's rural area. The reported
+        # flag reflects payment reclassification (many metro hospitals reclassify as rural), kept separately as 'rc'.
+        try: cb = float(r['cbsa']) if r['cbsa'] is not None else None
+        except ValueError: cb = None
+        rep = r['ru']; r['ru'] = rep if cb is None else 'R' if (cb < 100 or cb >= 99900) else 'U'
+        r['rc'] = 'R' if rep == 'R' and r['ru'] == 'U' else 'U' if rep == 'U' and r['ru'] == 'R' else None
         r['teach'] = 'major' if r['ir'] and r['beds'] and r['ir'] / r['beds'] >= 0.25 else 'minor' if r['ir'] and r['ir'] > 0 else 'none'
         r['ft'] = r['ftype'] if r['ftype'] in FTYPE else 'OTH'
     df2 = pd.DataFrame(recs)
@@ -209,7 +215,7 @@ def main():
         hi = len(index)
         for y, r in g.iterrows(): byyear[int(y)].append([hi] + [R(r[k]) for k in IX] + [None if r['m'][k] is None else R(r['m'][k], 0 if k == 'npr_ad' else 1 if k == 'dcoh' else 4) for k in IM] + [hard(r)])
         index.append({'c': ccn, 'n': L['name'], 'ci': L['city'], 's': L['st'], 'f': L['fips'], 'z': (L['zip'] or '')[:5], 'cb': None if L['cbsa'] is None else str(L['cbsa']).split('.')[0],
-                      'ru': L['ru'], 't': L['ft'], 'g': L['cg'], 'te': L['teach'], 'bb': L['bb'], 'yr': sorted(int(y) for y in g.index)})
+                      'ru': L['ru'], 'rc': L['rc'], 't': L['ft'], 'g': L['cg'], 'te': L['teach'], 'bb': L['bb'], 'yr': sorted(int(y) for y in g.index)})
         states.setdefault(L['st'] or 'NA', {})[ccn] = {'addr': L['addr'], 'zip': L['zip'], 'county': L['county'], 'ctrl': L['ctrl'],
             'years': {int(y): detail(r) for y, r in g.iterrows()}}
     (OUT / 'hosp').mkdir(parents=True, exist_ok=True)

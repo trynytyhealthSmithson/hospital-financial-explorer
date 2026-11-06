@@ -12,7 +12,7 @@ const KPIS = [
   ['cr', 'Current ratio', v => (v == null ? 'n/a' : v.toFixed(2)), 1, 'Current assets divided by current liabilities.'],
   ['debt', 'Liabilities to assets', v => fmtPct(v, 0), -1, 'Total liabilities divided by total assets.'],
   ['occ', 'Occupancy', v => fmtPct(v, 0), null, 'Inpatient days divided by available bed days.'],
-  ['mcr', 'Medicare share of days', v => fmtPct(v, 0), null, 'Medicare inpatient days as a share of all inpatient days.'],
+  ['mcr', 'Original Medicare share of days', v => fmtPct(v, 0), null, 'Original Medicare inpatient days as a share of all inpatient days. Medicare Advantage days are not counted here.'],
   ['mcd', 'Medicaid share of days', v => fmtPct(v, 0), null, 'Medicaid inpatient days as a share of all inpatient days.'],
   ['npr_ad', 'Net revenue per adjusted discharge', v => fmtUsd(v), null, 'Net patient revenue divided by discharges scaled up for outpatient volume (discharges times total charges over inpatient charges).'],
   ['exp_ad', 'Expense per adjusted discharge', v => fmtUsd(v), -1, 'Operating expense divided by adjusted discharges.'],
@@ -78,7 +78,7 @@ export default function HospitalProfile({ ccn, meta }) {
   return (
     <div>
       <div className="card" style={{ padding: '16px 18px', marginBottom: 14 }}>
-        <div className="cm-kicker">{meta.ftype[h.t]} · {meta.ctrl[h.g]} · {h.ru === 'R' ? 'Rural' : 'Urban'}{h.te !== 'none' ? ` · ${h.te === 'major' ? 'Major' : 'Minor'} teaching` : ''} · CCN {ccn}</div>
+        <div className="cm-kicker">{meta.ftype[h.t]} · {meta.ctrl[h.g]} · {h.ru === 'R' ? 'Rural' : 'Urban'}{h.rc === 'R' ? ' (reclassified as rural for Medicare payment)' : h.rc === 'U' ? ' (reclassified as urban for Medicare payment)' : ''}{h.te !== 'none' ? ` · ${h.te === 'major' ? 'Major' : 'Minor'} teaching` : ''} · CCN {ccn}</div>
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{titleCase(h.n)}</h1>
         <div style={{ color: 'var(--gray-600)', fontSize: 14 }}>{loc}{D.county ? ` · ${titleCase(D.county)} County` : ''}</div>
         <div style={{ marginTop: 8, fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}>

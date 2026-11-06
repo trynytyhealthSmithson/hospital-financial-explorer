@@ -8,7 +8,8 @@ const DEFS = [
   ['Current ratio', 'Total current assets divided by total current liabilities.'],
   ['Liabilities to assets', 'Total liabilities divided by total assets.'],
   ['Occupancy', 'Total inpatient days divided by total available bed days.'],
-  ['Payer mix', 'Medicare (Title XVIII) and Medicaid (Title XIX) inpatient days as a share of all inpatient days. Medicare days mainly reflect Original Medicare; how hospitals count Medicare Advantage and Medicaid managed care days on these lines varies, so treat payer mix as approximate and compare a hospital with itself over time.'],
+  ['Payer mix', 'Original Medicare (Title XVIII) and Medicaid (Title XIX) inpatient days as a share of all inpatient days. Medicare Advantage and most Medicaid managed care days are reported on other lines of the cost report and are not in these counts, so in high Medicare Advantage markets the Medicare share looks low. Read it as Original Medicare exposure, and compare a hospital with itself over time.'],
+  ['Urban and rural', 'Based on where the hospital is: rural if its Medicare CBSA is a state rural area, urban if it is a metropolitan or micropolitan area. The cost report\u2019s own urban or rural flag reflects Medicare payment reclassification (hundreds of metro hospitals reclassify as rural, which affects 340B and wage index rules); profiles note when a hospital has reclassified.'],
   ['Adjusted discharges', 'Discharges multiplied by total charges divided by inpatient charges, a standard way to scale inpatient volume up for outpatient work. Revenue and expense per adjusted discharge use it as the denominator.'],
   ['Uncompensated care', 'Total unreimbursed and uncompensated care from Worksheet S-10: charity care, bad debt and the unreimbursed cost of Medicaid and other public programs, divided by total costs.'],
 ];

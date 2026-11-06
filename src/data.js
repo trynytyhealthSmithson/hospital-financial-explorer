@@ -138,7 +138,7 @@ export const MEASURES = {
   beds:  { label: 'Beds', sub: 'Total beds reported on the cost report', fmt: v => fmtInt(v) },
   n:     { label: 'Hospitals', sub: 'Hospitals that filed a cost report for the year', fmt: v => fmtInt(v) },
   occ:   { label: 'Occupancy', sub: 'Inpatient days as a share of available bed days', fmt: v => fmtPct(v) },
-  mcr:   { label: 'Medicare share of inpatient days', sub: 'Medicare (Title XVIII) inpatient days as a share of all inpatient days', fmt: v => fmtPct(v) },
-  mcd:   { label: 'Medicaid share of inpatient days', sub: 'Medicaid (Title XIX) inpatient days as a share of all inpatient days', fmt: v => fmtPct(v) },
+  mcr:   { label: 'Original Medicare share of inpatient days', sub: 'Original Medicare (Title XVIII) inpatient days as a share of all inpatient days; Medicare Advantage days are not counted here', fmt: v => fmtPct(v) },
+  mcd:   { label: 'Medicaid share of inpatient days', sub: 'Medicaid (Title XIX) inpatient days as a share of all inpatient days; mostly fee-for-service Medicaid', fmt: v => fmtPct(v) },
   unc:   { label: 'Uncompensated care', sub: 'Unreimbursed and uncompensated care (charity care, bad debt and Medicaid shortfall) as a share of total costs', fmt: v => fmtPct(v) },
 };
