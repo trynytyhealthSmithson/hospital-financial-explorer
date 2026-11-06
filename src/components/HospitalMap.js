@@ -141,7 +141,7 @@ export default function HospitalMap({ meta, route, onHospital }) {
             <div><b>{fmtPct(S.mcr)}</b><span>of inpatient days are Original Medicare; {fmtPct(S.mcd)} Medicaid</span></div>
             <div><b>{fmtPct(S.unc)}</b><span>of costs are uncompensated care</span></div>
           </div>
-          <p className="cm-note">{S.n - S.clean > 0 ? `${S.n - S.clean} of ${S.n} reports are left out of margins and medians because they cover part of a year or have missing or implausible revenue. ` : ''}Combined margins weight each hospital by its revenue; the median hospital shows the typical one. Patient service margin leaves out other income (investment income, grants, contributions and some operating revenue), so it often runs below zero even for strong hospitals. <a href="#methodology">How these are calculated</a></p>
+          <p className="cm-note">{S.n - S.clean > 0 ? `${S.n - S.clean} of ${S.n} ${S.n - S.clean === 1 ? 'report is' : 'reports are'} left out of margins and medians because they cover part of a year or have missing or implausible revenue. ` : ''}Combined margins weight each hospital by its revenue; the median hospital shows the typical one. Patient service margin leaves out other income (investment income, grants, contributions and some operating revenue), so it often runs below zero even for strong hospitals. <a href="#methodology">How these are calculated</a></p>
           {county && <p className="cm-note">Medicare Advantage and ACO activity in this county: <a href={`${MA_URL}/#map/${county}`} target="_blank" rel="noreferrer">MA Enrollment Explorer</a> · <a href={`${MSSP_URL}/#map/${county}`} target="_blank" rel="noreferrer">MSSP Explorer</a></p>}
         </div>
       </div>
