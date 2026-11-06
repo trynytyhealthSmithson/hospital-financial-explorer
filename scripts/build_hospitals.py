@@ -53,6 +53,17 @@ def bed_band(b):
     return None if not b or b <= 0 else 'b1' if b < 25 else 'b2' if b < 100 else 'b3' if b < 300 else 'b4' if b < 500 else 'b5'
 BEDS = {'b1': 'Under 25 beds', 'b2': '25 to 99 beds', 'b3': '100 to 299 beds', 'b4': '300 to 499 beds', 'b5': '500 or more beds'}
 
+def clean(o):
+    """Replace NaN and infinities with null anywhere in an output object."""
+    if isinstance(o, dict): return {k: clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)): return [clean(v) for v in o]
+    if isinstance(o, float) and not np.isfinite(o): return None
+    if isinstance(o, np.generic): return clean(o.item())
+    return o
+
+def dump(o, path, **kw):
+    json.dump(clean(o), open(path, 'w'), allow_nan=False, **kw)
+
 def norm(s):
     s = unicodedata.normalize('NFKD', str(s)).encode('ascii', 'ignore').decode().upper()
     s = re.sub(r'\b(COUNTY|PARISH|BOROUGH|CENSUS AREA|CITY AND BOROUGH|MUNICIPALITY|MUNICIPIO)\b', '', s)
@@ -202,15 +213,15 @@ def main():
         states.setdefault(L['st'] or 'NA', {})[ccn] = {'addr': L['addr'], 'zip': L['zip'], 'county': L['county'], 'ctrl': L['ctrl'],
             'years': {int(y): detail(r) for y, r in g.iterrows()}}
     (OUT / 'hosp').mkdir(parents=True, exist_ok=True)
-    for st, o in states.items(): json.dump(o, open(OUT / 'hosp' / f'{st}.json', 'w'), separators=(',', ':'))
-    json.dump(index, open(OUT / 'hospitals.json', 'w'), separators=(',', ':'))
+    for st, o in states.items(): dump(o, OUT / 'hosp' / f'{st}.json', separators=(',', ':'))
+    dump(index, OUT / 'hospitals.json', separators=(',', ':'))
     (OUT / 'year').mkdir(exist_ok=True)
-    for y, rows in byyear.items(): json.dump({'fields': ['i'] + IX + IM + ['flag'], 'rows': rows}, open(OUT / 'year' / f'{y}.json', 'w'), separators=(',', ':'))
-    json.dump({str(y): v for y, v in peers.items()}, open(OUT / 'peers.json', 'w'), separators=(',', ':'))
+    for y, rows in byyear.items(): dump({'fields': ['i'] + IX + IM + ['flag'], 'rows': rows}, OUT / 'year' / f'{y}.json', separators=(',', ':'))
+    dump({str(y): v for y, v in peers.items()}, OUT / 'peers.json', separators=(',', ':'))
     meta = {'years': YEARS, 'ftype': {**FTYPE, 'OTH': 'Other'}, 'ctrl': CTRL, 'beds': BEDS,
             'counts': {str(y): {'hospitals': int((df2.year == y).sum()), 'clean': int(sum(1 for r in recs if r['year'] == y and not hard(r)))} for y in YEARS},
             'county_match': round(float(df.fips.notna().mean()), 4), 'built': pd.Timestamp.today().strftime('%Y-%m-%d')}
-    json.dump(meta, open(OUT / 'meta.json', 'w'), indent=1)
+    dump(meta, OUT / 'meta.json', indent=1)
     print('flags', pd.Series([q for r in recs for q in r['q']]).value_counts().to_dict())
     print({k: (OUT / k).stat().st_size // 1024 for k in ['hospitals.json', 'peers.json', 'year/2024.json', 'hosp/OH.json', 'hosp/CA.json']}, 'KB; states', len(states))
 
