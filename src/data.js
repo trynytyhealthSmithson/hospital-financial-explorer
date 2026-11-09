@@ -200,3 +200,4 @@ export const loadHcris = st => load('hcris:' + st, `${BASE}/hcris/${st}.json`);
 export const loadHcrisIdx = () => load('hcrisidx', `${BASE}/hcris_idx.json`);
 export const loadOp = st => load('op:' + st, `${BASE}/op/${st}.json`);
 export const loadOpIdx = () => load('opidx', `${BASE}/op_idx.json`);
+export const load340b = () => load('340b', `${BASE}/340b.json`);

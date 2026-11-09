@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.2', date: 'November 2026', items: [
+      '340B Drug Pricing Program from HRSA\u2019s covered entity registry: participation, entity type, years in the program, child sites and contract pharmacies (including out of state) on hospital profiles, Compare Hospitals and system pages.',
+      'Screener filter and CSV columns for 340B, and a new preset for 340B hospitals losing money.',
+    ],
+  },
+  {
     version: 'Beta 2.1', date: 'November 2026', items: [
       'Outpatient procedures: Original Medicare outpatient surgery, device implants, endovascular, endoscopy, radiation therapy and observation stays by service line, 2017 to 2024, with the change since 2019 and every procedure group, on hospital profiles, system pages and Compare Hospitals.',
     ],
