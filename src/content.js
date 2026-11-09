@@ -4,6 +4,13 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.9', date: 'November 2026', items: [
+      'Health systems: combined Medicare inpatient margin, Medicare share of days including Medicare Advantage, MA share of Medicare days, average age of plant and Medicare add-on payments, as sortable columns on the systems list and on each system page.',
+      'Member hospital tables show each hospital\u2019s Medicare inpatient margin and MA share.',
+      'Maryland hospitals, paid under the state\u2019s all-payer model, no longer show a Medicare inpatient PPS margin.',
+    ],
+  },
+  {
     version: 'Beta 1.8', date: 'November 2026', items: [
       'Medicare fee-for-service inpatient margin: what Medicare paid for inpatient care against what that care cost, from each hospital\u2019s own Medicare settlement, with the all-hospital figure for comparison. Also in the screener and Compare Hospitals.',
       'Capital and debt: depreciable assets, accumulated depreciation, average age of plant, long-term debt, fund balance and debt to capitalization by year.',

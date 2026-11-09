@@ -75,10 +75,42 @@ for y in meta['years']:
         r = dict(zip(F, row)); sid = H[r['i']].get('sy')
         if sid: by[sid].append(r)
     for sid, L in by.items(): sysd[sid].setdefault('y', {})[str(y)] = rollup(L)
+# Measures from the full cost report files (build_hcris.py), pooled across member hospitals
+HD = OUT / 'hcris'
+if HD.exists():
+    hc = {}
+    for f in HD.glob('*.json'): hc.update(json.load(open(f)))
+    dep = {}
+    for f in (OUT / 'hosp').glob('*.json'):
+        for c, v in json.load(open(f)).items():
+            for y, r in v.get('years', {}).items(): dep[(c, y)] = r.get('dep')
+    for sid, sy in sysd.items():
+        for y in sorted({y for c in sy['h'] for y in hc.get(c, {})}):
+            t = Counter()
+            for c in sy['h']:
+                o = hc.get(c, {}).get(y)
+                if not o: continue
+                if o.get('pd') and o['pd'][4]:
+                    p = o['pd']; t['tot'] += p[4]; t['mcr'] += p[0] or 0; t['ma'] += p[1] or 0; t['mcd'] += (p[2] or 0) + (p[3] or 0)
+                    if p[1]: t['mcr_r'] += p[0] or 0; t['ma_r'] += p[1]  # MA share only from hospitals that report MA days
+                m = o.get('mm')
+                if m and abs((m[0] + m[1] - m[2]) / (m[0] + m[1])) <= 1: t['mp'] += m[0] + m[1]; t['mc'] += m[2]; t['mn'] += 1
+                b = o.get('bs'); d = dep.get((c, y))
+                if b and b[0] and b[0] > 0 and d and d > 0: t['acc'] += b[0]; t['dep'] += d
+                a = o.get('a') or {}
+                t['add'] += sum(a.get(k, 0) for k in ('out', 'ime', 'ime_ma', 'dsh', 'ucp', 'dgme'))
+            r = sy.setdefault('y', {}).setdefault(y, {})
+            if t['tot']: r['mall'] = round((t['mcr'] + t['ma']) / t['tot'], 4); r['mcdsh'] = round(t['mcd'] / t['tot'], 4)
+            if t['ma_r']: r['mapen'] = round(t['ma_r'] / (t['ma_r'] + t['mcr_r']), 4)
+            if t['mp']: r['mmm'] = round((t['mp'] - t['mc']) / t['mp'], 4); r['mmn'] = t['mn']
+            if t['dep']: r['age'] = round(t['acc'] / t['dep'], 1)
+            if t['add']: r['add'] = round(t['add'])
+
 json.dump(H, open(OUT / 'hospitals.json', 'w'), separators=(',', ':'), allow_nan=False)
 json.dump(sysd, open(OUT / 'systems.json', 'w'), separators=(',', ':'), allow_nan=False)
 big = sorted(sysd.items(), key=lambda kv: -len(kv[1]['h']))[:8]
 print('systems', len(sysd), 'hospitals in a system', sum(len(s['h']) for s in sysd.values()), 'of', len(H))
 for sid, s in big: print(' ', s['n'], len(s['h']), s['st'][:6])
+print('TriHealth 2024', {k: v for k, v in [s for s in sysd.values() if '360134' in s['h']][0]['y']['2024'].items() if k in ('mall', 'mapen', 'mmm', 'age', 'add')})
 print('TriHealth check', [(s['n'], s['h']) for s in sysd.values() if '360134' in s['h']])
 print((OUT / 'systems.json').stat().st_size // 1024, 'KB')

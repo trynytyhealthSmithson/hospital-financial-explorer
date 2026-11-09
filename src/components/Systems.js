@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+import { loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
 
@@ -16,16 +16,18 @@ export function SystemList({ meta }) {
   const ql = q.trim().toLowerCase();
   const list = rows.filter(r => !ql || r.n.toLowerCase().includes(ql) || (r.ci || '').toLowerCase().includes(ql) || r.st.join(' ').toLowerCase().includes(ql))
     .sort((a, b) => (sort === 'n' ? a.n.localeCompare(b.n) : (b[sort] ?? -1e15) - (a[sort] ?? -1e15)));
-  const C = [['n', 'System'], ['nh', 'Hospitals'], ['states', 'States'], ['beds', 'Beds'], ['npr', 'Net patient revenue'], ['tm', 'Combined total margin'], ['tm_med', 'Median hospital margin']];
+  const C = [['n', 'System'], ['nh', 'Hospitals'], ['states', 'States'], ['beds', 'Beds'], ['npr', 'Net patient revenue'], ['tm', 'Combined total margin'], ['tm_med', 'Median hospital margin'],
+    ['mmm', 'Medicare inpatient margin'], ['mapen', 'MA share of Medicare days'], ['age', 'Age of plant (years)']];
   return (
-    <ChartCard title={`${fmtInt(rows.length)} health systems with two or more hospitals`} sub={`${Ly} cost reports for their member hospitals. ${NOTE}`}
+    <ChartCard title={`${fmtInt(rows.length)} health systems with two or more hospitals`} sub={`${Ly} cost reports for their member hospitals. Medicare inpatient margin, Medicare Advantage share and age of plant pool member hospitals from the full cost report files. ${NOTE}`}
       headerRight={<input className="cm-search" placeholder="Find a system by name, city or state" value={q} onChange={e => setQ(e.target.value)} />}
-      csvName={`health-systems-${Ly}`} csv={() => [['system_id', 'system', 'hq_city', 'hq_state', 'hospitals', 'states', 'beds', 'net_patient_revenue', 'net_income', 'combined_total_margin', 'median_hospital_margin'], ...list.map(r => [r.id, r.n, r.ci, r.s, r.nh, r.st.join(' '), r.beds, r.npr, r.ni, r.tm, r.tm_med])]}>
+      csvName={`health-systems-${Ly}`} csv={() => [['system_id', 'system', 'hq_city', 'hq_state', 'hospitals', 'states', 'beds', 'net_patient_revenue', 'net_income', 'combined_total_margin', 'median_hospital_margin', 'medicare_ffs_inpatient_margin', 'ma_share_of_medicare_days', 'medicare_share_of_days_incl_ma', 'average_age_of_plant_years', 'medicare_addon_payments'], ...list.map(r => [r.id, r.n, r.ci, r.s, r.nh, r.st.join(' '), r.beds, r.npr, r.ni, r.tm, r.tm_med, r.mmm ?? '', r.mapen ?? '', r.mall ?? '', r.age ?? '', r.add ?? ''])]}>
       <div style={{ overflow: 'auto', maxHeight: 640 }}><table className="cm-table"><thead><tr>
         {C.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => k !== 'states' && setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}</tr></thead>
         <tbody>{list.map(r => <tr key={r.id}><td><a href={`#sys/${r.id}`}>{r.n}</a>{r.ci && <span className="cm-sttag">{titleCase(r.ci)}, {r.s}</span>}</td><td className="n">{r.nh}</td>
           <td className="n" style={{ fontSize: 11 }}>{r.st.length > 4 ? `${r.st.length} states` : r.st.join(', ')}</td><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td>
-          <td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.tm_med)}</td></tr>)}</tbody></table></div>
+          <td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.tm_med)}</td>
+          <td className="n" style={{ color: r.mmm < 0 ? 'var(--red)' : undefined }}>{r.mmm == null ? '' : fmtPct(r.mmm)}</td><td className="n">{r.mapen == null ? '' : fmtPct(r.mapen, 0)}</td><td className="n">{r.age == null ? '' : r.age.toFixed(1)}</td></tr>)}</tbody></table></div>
     </ChartCard>
   );
 }
@@ -33,6 +35,8 @@ export function SystemList({ meta }) {
 export function SystemPage({ id, meta }) {
   const [S, setS] = useState(null), [H, setH] = useState(null), [Y, setY] = useState(null), [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null);
   const mapRef = useRef(null);
+  const [HX, setHX] = useState(null);
+  useEffect(() => { loadHcrisIdx().then(setHX); }, []);
   const Ly = meta.years[meta.years.length - 1];
   useEffect(() => { Promise.all([loadSystems(), loadHospitals(), loadYear(Ly), loadGeo(), loadMarketsMeta()]).then(([s, h, y, g, mm]) => { setS(s); setH(h); setY(y); setG(g); setMM(mm);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, [Ly]);
@@ -58,6 +62,7 @@ export function SystemPage({ id, meta }) {
   const hosp = sys.h.map(c => ({ h: byC[c], r: Y.byIdx.get(byC[c].i) })).sort((a, b) => ((b.r && b.r.npr) || 0) - ((a.r && a.r.npr) || 0));
   const fmap = Object.fromEntries(cty.map(r => [r.f, r]));
   const hx = new Set(sys.hx || []);
+  const hxv = (c, i) => { const r = HX && HX.years[Ly] && HX.years[Ly][c]; return r ? r[i] : null; };
   const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
 
   return (
@@ -72,6 +77,10 @@ export function SystemPage({ id, meta }) {
         <div className="hp-kpi"><b style={{ color: L.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(L.tm)}</b><span>combined total margin</span><i>Median member hospital {fmtPct(L.tm_med)}</i></div>
         <div className="hp-kpi"><b>{fmtPct(L.pm)}</b><span>combined patient service margin</span></div>
         <div className="hp-kpi"><b>{fmtUsdM(L.ni)}</b><span>net income of member hospitals</span><i>From hospital cost reports; system-level items are not included</i></div>
+        {L.mmm != null && <div className="hp-kpi"><b style={{ color: L.mmm < 0 ? 'var(--red)' : 'var(--teal-dark)' }}>{fmtPct(L.mmm)}</b><span>Medicare fee-for-service inpatient margin</span><i>{L.mmn} inpatient PPS {L.mmn === 1 ? 'hospital' : 'hospitals'}{HX && HX.meta.mm_margin[Ly] != null ? `; all PPS hospitals ${fmtPct(HX.meta.mm_margin[Ly])}` : ''}</i></div>}
+        {L.mall != null && <div className="hp-kpi"><b>{fmtPct(L.mall, 0)}</b><span>of inpatient days are Medicare, including Medicare Advantage</span><i>{L.mapen != null ? `${fmtPct(L.mapen, 0)} of Medicare days are MA` : 'No MA days reported'}; Medicaid {fmtPct(L.mcdsh, 0)}</i></div>}
+        {L.age != null && <div className="hp-kpi"><b>{L.age.toFixed(1)} years</b><span>average age of plant</span><i>Accumulated depreciation over annual depreciation, all members</i></div>}
+        {L.add != null && <div className="hp-kpi"><b>{fmtUsdM(L.add)}</b><span>Medicare add-on payments</span><i>Teaching (IME, GME), DSH, uncompensated care and outliers</i></div>}
       </div>
       <div className="cm-grid">
         <ChartCard title="Margins over time" sub="Combined total margin of member hospitals (revenue-weighted) and the median member hospital." filename={`system-${id}-margins`}
@@ -98,10 +107,11 @@ export function SystemPage({ id, meta }) {
         </div>
       </ChartCard>
       <ChartCard title={`Member hospitals, ${Ly}`} style={{ marginTop: 14 }} csvName={`system-${id}-hospitals-${Ly}`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
-        <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th></tr></thead>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'medicare_ffs_inpatient_margin', 'ma_share_of_medicare_days', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hxv(h.c, 6) ?? '', hxv(h.c, 1) ? hxv(h.c, 4) : '', hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
+        <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th><th className="n">Medicare inpatient margin</th><th className="n">MA share of Medicare</th></tr></thead>
           <tbody>{hosp.map(({ h, r }) => <tr key={h.c} style={r && r.flag ? { color: 'var(--gray-500)' } : undefined}><td><a href={`#h/${h.c}`}>{titleCase(h.n)}</a>{hx.has(h.c) && <sup title="Not in the 2023 AHRQ linkage; added because its own cost report names this system's home office" style={{ color: 'var(--teal-dark)', marginLeft: 2 }}>†</sup>}<span className="cm-sttag">{titleCase(h.ci || '')}, {h.s}</span></td><td>{meta.ftype[h.t]}</td>
-            {r ? <><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td><td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td></> : <td colSpan={5} style={{ color: 'var(--gray-500)' }}>No {Ly} report</td>}</tr>)}</tbody></table></div>
+            {r ? <><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td><td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td></> : <td colSpan={5} style={{ color: 'var(--gray-500)' }}>No {Ly} report</td>}
+            <td className="n">{hxv(h.c, 6) == null ? '' : fmtPct(hxv(h.c, 6))}</td><td className="n">{hxv(h.c, 1) ? fmtPct(hxv(h.c, 4), 0) : ''}</td></tr>)}</tbody></table></div>
         <p className="cm-note">{hx.size > 0 && <>† {hx.size} {hx.size === 1 ? 'hospital is' : 'hospitals are'} not in the 2023 AHRQ linkage and {hx.size === 1 ? 'was' : 'were'} added because {hx.size === 1 ? 'its' : 'their'} own cost report names this system&apos;s home office. </>}{NOTE} Combined figures add up member hospitals&apos; own cost reports, so they leave out the system&apos;s physician groups, insurance plans, investments and other businesses, and will not match a system&apos;s consolidated financial statements.</p>
       </ChartCard>
     </div>

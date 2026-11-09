@@ -142,7 +142,8 @@ for y in YEARS:
                 for i in range(3): fam[row[2]][i] += row[3 + i] or 0
             o['f'] = sorted([[k] + v for k, v in fam.items()], key=lambda r: -(r[1] or 0))
             if y == YEARS[-1]: o['dl'] = sorted(dept[ccn], key=lambda r: -(r[3] or 0))
-        if ccn in mm.index and add.get(ccn, {}).get('drg'):
+        # Maryland hospitals are paid under the state's all-payer model, not the inpatient PPS, so they get no PPS margin
+        if ccn in mm.index and add.get(ccn, {}).get('drg') and not ccn.startswith('21'):
             r = mm.loc[ccn]
             if pd.notna(r.cost) and r.cost > 0 and pd.notna(r.op) and r.op > 0:
                 o['mm'] = [round(r.op), round(r.cap) if pd.notna(r.cap) else 0, round(r.cost)]
