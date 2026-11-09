@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
+import ServiceArea from './ServiceArea';
 import { loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -124,6 +125,8 @@ export default function HospitalProfile({ ccn, meta }) {
           </LineChart></ResponsiveContainer></div>
         </ChartCard>
       </div>
+
+      <ServiceArea ccn={ccn} h={h} />
 
       <ChartCard title="Financial statements by year" sub="As filed on the Medicare cost report (Worksheets G, G-2, G-3, S-10 and E). Dollars." style={{ marginTop: 14 }}>
         <div style={{ overflow: 'auto' }}>

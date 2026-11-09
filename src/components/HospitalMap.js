@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChartCard from './ChartCard';
+import MarketPanel from './MarketPanel';
 import UsMap, { SeqLegend, DivLegend, visibleCounties, unionBounds } from './UsMap';
 import {
   loadGeo, loadHospitals, loadYear, quantileBreaks, colorFor, divBreaks, divColor, fmtInt, fmtPct, fmtUsdM, fmtDays,
@@ -165,6 +166,10 @@ export default function HospitalMap({ meta, route, onHospital }) {
           {list.length > 400 && <p className="cm-note">Showing 400 of {list.length.toLocaleString()} hospitals. Narrow to a state or county, or download the CSV for all of them.</p>}
         </div>
       </ChartCard>
+
+      {(county || area || stateFips) ? <MarketPanel key={county || (area ? area.join(',') : stateFips)} H={H} onHospital={onHospital} scopeName={scopeName}
+        fips={county ? [county] : area ? area : geo.counties.filter(c => c.id.slice(0, 2) === stateFips).map(c => c.id)} />
+        : <p className="cm-note" style={{ marginTop: 14 }}>Pick a state, click a county or select an area to see where its Medicare patients are admitted and which hospitals lead each service line.</p>}
 
       <p className="cm-note" style={{ marginTop: 10 }}>Source: CMS Hospital Provider Cost Report public use file ({meta.years[0]} to {meta.years[meta.years.length - 1]}), from the Healthcare Cost Report Information System. Cost reports are filed for Medicare and are not audited financial statements. See <a href="#methodology">Methodology</a>.</p>
     </div>
