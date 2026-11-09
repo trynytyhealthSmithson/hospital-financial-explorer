@@ -67,6 +67,8 @@ def zip_table():
         z[r['zip_code']] = [round(float(r['long']), 3), round(float(r['lat']), 3), f]
     return z
 
+KNOWN = set()
+
 def read_hsaf(y):
     d = pd.read_csv(RAW / 'hsaf' / f'Hospital_Service_Area_{y}.csv', dtype=str)
     d.columns = ['ccn', 'zip', 'days', 'chg', 'cases']
@@ -74,11 +76,20 @@ def read_hsaf(y):
     d = d[d.zip.str.fullmatch(r'\d{5}', na=False)]
     for c in ['days', 'chg', 'cases']: d[c] = pd.to_numeric(d[c], errors='coerce')  # '*' -> NaN (1 to 10 cases)
     d['ccn'] = d.ccn.str.upper().str.zfill(6)
+    # Units with their own CCN (a letter in the third position: psychiatric S/M, rehabilitation T/R, swing beds U/W/Y/Z)
+    # are folded into the parent hospital (same state code and last three digits with a 0) when the parent is known.
+    unit = d.ccn.str.match(r'^\d\d[A-Z]\d{3}$')
+    parent = d.ccn.str[:2] + '0' + d.ccn.str[3:]
+    d.loc[unit & parent.isin(KNOWN), 'ccn'] = parent[unit & parent.isin(KNOWN)]
+    # Re-total rows that now share a hospital and ZIP; a cell stays suppressed only if every part was suppressed
+    if unit.any():
+        d = d.groupby(['ccn', 'zip'], as_index=False)[['days', 'chg', 'cases']].sum(min_count=1)
     return d
 
 def main():
     Z = zip_table()
     H = json.load(open(OUT / 'hospitals.json')); hc = {h['c']: h for h in H}
+    KNOWN.update(hc)
     names = {}
     # Service lines and names of hospitals without a cost report
     SLY, slmeta = {}, {}

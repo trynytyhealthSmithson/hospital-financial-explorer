@@ -35,6 +35,7 @@ export default function Methodology({ meta }) {
       <ul>
         <li>CMS hides any hospital and ZIP code pair with 1 to 10 cases. Most such pairs are distant ZIP codes, but together they hold a meaningful minority of cases, so shares are of reported cases and small or distant hospitals are understated. Each view says how many pairs were hidden.</li>
         <li>Each ZIP code is assigned to its main county; ZIP codes that cross a county line count entirely toward that county.</li>
+        <li>Psychiatric, rehabilitation and swing-bed units that CMS lists under their own unit number (a letter in the third character of the CCN) are counted with their parent hospital.</li>
         <li>A hospital&apos;s primary service area is the smallest set of its ZIP codes, largest first, that supplies 75% of its reported cases; the secondary service area extends that to 90%.</li>
         <li>HHI (the Herfindahl index) uses the 2023 merger guideline thresholds and currently treats each hospital on its own. Hospitals in the same health system will be combined once system membership is added.</li>
       </ul>
