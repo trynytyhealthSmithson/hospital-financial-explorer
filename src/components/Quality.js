@@ -30,7 +30,7 @@ export default function QualityCard({ ccn }) {
         <tbody>{[['Clinical outcomes', q.v_clin], ['Person and community engagement', q.v_pce], ['Safety', q.v_safe], ['Efficiency and cost reduction', q.v_eff]].map(([l, v]) => <tr key={l}><td>{l}</td><td className="n">{v ?? 'n/a'}</td></tr>)}</tbody></table>}
       {err.length > 0 && <table className="cm-table" style={{ marginTop: 12 }}><thead><tr><th>Readmissions program condition</th><th className="n">Excess readmission ratio</th><th>Compared with expected</th></tr></thead>
         <tbody>{err.map(([k, v]) => <tr key={k}><td>{READM_LABEL[k]}</td><td className="n" style={{ color: v > 1 ? 'var(--red)' : 'var(--teal-dark)' }}>{v.toFixed(3)}</td><td>{v > 1 ? `${((v - 1) * 100).toFixed(1)}% more readmissions than expected` : `${((1 - v) * 100).toFixed(1)}% fewer than expected`}</td></tr>)}</tbody></table>}
-      <p className="cm-note">Readmission ratios cover {M.hrrp_period}; patient experience covers {M.hcahps_period}. A ratio above 1.000 means more readmissions than CMS expected for the hospital&apos;s patients. Penalty amounts are set in each year&apos;s Medicare inpatient payment rule and are not in these files.</p>
+      <p className="cm-note">Readmission ratios cover {M.hrrp_period}; patient experience covers {M.hcahps_period}. A ratio above 1.000 means more readmissions than CMS expected for the hospital&apos;s patients. The resulting payment adjustments for FY 2027 appear in the Medicare payment profile below.</p>
     </ChartCard>
   );
 }

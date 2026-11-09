@@ -10,3 +10,4 @@ Free explorer of hospital finances from the CMS Hospital Provider Cost Report pu
 - `scripts/build_systems.py` adds health systems from `data/raw/systems/chsp-hospital-linkage-2023.csv` (AHRQ Compendium). Order: build_hospitals, build_systems, build_markets, build_overview.
 - `scripts/build_vbc_exposure.py <path to ma-enrollment-explorer/public/data/counties.json>` writes county MA penetration and MSSP ACO share for the exposure measures.
 - `scripts/build_quality.py` builds quality and penalty results from `data/raw/quality` (CMS Provider Data Catalog).
+- `scripts/build_ipps.py` builds the Medicare payment profile from the FY 2027 IPPS Impact File (`data/raw/ipps`).

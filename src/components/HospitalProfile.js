@@ -4,6 +4,7 @@ import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
 import ServiceArea from './ServiceArea';
 import QualityCard from './Quality';
+import PaymentCard from './Payment';
 import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -134,6 +135,7 @@ export default function HospitalProfile({ ccn, meta }) {
       </div>
 
       <QualityCard ccn={ccn} />
+      <PaymentCard ccn={ccn} />
 
       <ServiceArea ccn={ccn} h={h} />
 

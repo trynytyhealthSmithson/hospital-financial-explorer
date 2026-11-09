@@ -119,8 +119,10 @@ export function rollup(rows) {
   const rev = sum(ok, 'rev'), npr = sum(ok, 'npr'), days = sum(rows, 'days'), bd = sum(rows, 'bed_days'), cost = sum(rows, 'cost');
   const tms = ok.map(r => r.tm).filter(v => v != null);
   const qs = rows.map(r => r.q).filter(Boolean);
+  const cm = rows.map(r => r.ip && r.ip.cmi).filter(v => v != null);
   const st = qs.map(q => q.star).filter(v => v != null), hp = qs.filter(q => q.hacpen != null), tp = qs.map(q => q.tps).filter(v => v != null);
   return {
+    cmi: median(cm),
     stars: st.length ? st.reduce((a, b) => a + b, 0) / st.length : null, hacpen: hp.length ? hp.filter(q => q.hacpen).length / hp.length : null, tps: median(tp),
     n: rows.length, clean: ok.length, beds: sum(rows, 'beds'), npr: sum(rows, 'npr'), dis: sum(rows, 'dis'), fte: sum(rows, 'fte'),
     tm: rev ? sum(ok, 'ni') / rev : null, pm: npr ? sum(ok, 'nisp') / npr : null,
@@ -143,6 +145,7 @@ export const MEASURES = {
   occ:   { label: 'Occupancy', sub: 'Inpatient days as a share of available bed days', fmt: v => fmtPct(v) },
   mcr:   { label: 'Original Medicare share of inpatient days', sub: 'Original Medicare (Title XVIII) inpatient days as a share of all inpatient days; Medicare Advantage days are not counted here', fmt: v => fmtPct(v) },
   mcd:   { label: 'Medicaid share of inpatient days', sub: 'Medicaid (Title XIX) inpatient days as a share of all inpatient days; mostly fee-for-service Medicaid', fmt: v => fmtPct(v) },
+  cmi:   { label: 'Median case mix index', sub: 'Median Medicare case mix index (patient acuity) of inpatient PPS hospitals, FY 2027 payment rule', fmt: v => (v == null ? 'n/a' : v.toFixed(2)) },
   stars: { label: 'Average CMS star rating', sub: 'Average overall star rating (1 to 5) of hospitals CMS rated, FY 2026', fmt: v => (v == null ? 'n/a' : v.toFixed(1) + ' stars') },
   tps:   { label: 'Median value-based purchasing score', sub: 'Median Hospital VBP total performance score (0 to 100), FY 2026', fmt: v => (v == null ? 'n/a' : v.toFixed(1)) },
   hacpen:{ label: 'Hospitals with a HAC penalty', sub: 'Share of hospitals in the hospital-acquired condition program that took the 1% payment cut, FY 2026', fmt: v => fmtPct(v, 0) },
@@ -191,3 +194,5 @@ export const loadQuality = () => load('quality', `${BASE}/quality.json`);
 export const READM_LABEL = { AMI: 'Heart attack', HF: 'Heart failure', PN: 'Pneumonia', COPD: 'COPD', CABG: 'Coronary bypass surgery', HIPKNEE: 'Hip and knee replacement' };
 /** Percentile (0 to 100) of a value within a list of 21 cut points at 0, 5, ..., 100 */
 export const pctRank = (v, cuts) => { if (v == null || !cuts) return null; let i = 0; while (i < cuts.length - 1 && v > cuts[i + 1]) i++; return Math.min(100, i * 5); };
+export const loadIpps = () => load('ipps', `${BASE}/ipps.json`);
+export const fmtAdj = f => (f == null ? 'n/a' : `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)}%`);
