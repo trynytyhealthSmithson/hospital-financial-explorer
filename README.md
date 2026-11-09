@@ -13,4 +13,5 @@ Free explorer of hospital finances from the CMS Hospital Provider Cost Report pu
 - `scripts/build_ipps.py` builds the Medicare payment profile from the FY 2027 IPPS Impact File (`data/raw/ipps`).
 - `scripts/build_outpatient.py` builds outpatient procedures from `data/raw/outpatient` (Medicare Outpatient Hospitals by Provider and Service, data.cms.gov). Run after `build_hospitals.py`.
 - `scripts/build_340b.py` builds 340B participation from `data/raw/340b/OPA_CE_DAILY_PUBLIC.JSON` (HRSA OPAIS Covered Entity Daily Export, JSON).
+- `scripts/build_aco.py` matches hospitals to MSSP ACOs from `data/raw/aco` (ACO Participants files, data.cms.gov). Run after `build_340b.py` inputs are in place.
 - `scripts/build_hcris.py` builds payer mix with Medicare Advantage, Medicare add-on payments, department costs and home offices from the full HCRIS cost report files (`data/raw/hcris`, from downloads.cms.gov/files/hcris/HOSP10FY<year>.zip; needs `pip install duckdb`). Run after `build_hospitals.py`.

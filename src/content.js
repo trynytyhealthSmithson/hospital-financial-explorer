@@ -4,6 +4,11 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.3', date: 'November 2026', items: [
+      'Medicare Shared Savings Program ACOs: the ACOs each hospital takes part in (2022 to 2026, matched by legal business name), with track and links to the ACO in the TRYNYTY MSSP Explorer, on hospital profiles, Compare Hospitals and system pages, plus a screener filter.',
+    ],
+  },
+  {
     version: 'Beta 2.2', date: 'November 2026', items: [
       '340B Drug Pricing Program from HRSA\u2019s covered entity registry: participation, entity type, years in the program, child sites and contract pharmacies (including out of state) on hospital profiles, Compare Hospitals and system pages.',
       'Screener filter and CSV columns for 340B, and a new preset for 340B hospitals losing money.',
