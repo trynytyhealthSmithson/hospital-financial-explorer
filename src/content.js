@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.6', date: 'November 2026', items: [
+      'Medicare payment profile (FY 2027 payment rule): case mix index, wage index and reclassification, DSH and uncompensated care, teaching intensity, and each hospital\u2019s value-based purchasing and readmissions payment adjustments.',
+      'Case mix index and readmission penalty in the screener, the map (median case mix index) and Compare Hospitals.',
+    ],
+  },
+  {
     version: 'Beta 1.5', date: 'November 2026', items: [
       'Quality and Medicare penalties (FY 2026): star rating, patient experience, value-based purchasing score and domains, excess readmissions by condition, and the hospital-acquired condition penalty on every hospital profile.',
       'Quality on the map (average star rating, median VBP score, share penalized), in the screener (filters, a new preset and CSV columns) and in Compare Hospitals.',

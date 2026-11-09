@@ -3,7 +3,7 @@ import ChartCard from './ChartCard';
 import MarketPanel from './MarketPanel';
 import UsMap, { SeqLegend, DivLegend, visibleCounties, unionBounds } from './UsMap';
 import {
-  loadQuality, loadGeo, loadHospitals, loadYear, quantileBreaks, colorFor, divBreaks, divColor, fmtInt, fmtPct, fmtUsdM, fmtDays,
+  loadIpps, loadQuality, loadGeo, loadHospitals, loadYear, quantileBreaks, colorFor, divBreaks, divColor, fmtInt, fmtPct, fmtUsdM, fmtDays,
   ST_FIPS, FIPS_ST, MEASURES, FTYPE_ORDER, rollup, MA_URL, MSSP_URL,
 } from '../data';
 
@@ -14,7 +14,8 @@ export default function HospitalMap({ meta, route, onHospital }) {
   const [geo, setGeo] = useState(null);
   const [H, setH] = useState(null);
   const [Y, setY] = useState(null), [QD, setQD] = useState(null);
-  useEffect(() => { loadQuality().then(setQD); }, []);
+  const [IPD, setIPD] = useState(null);
+  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); }, []);
   const [err, setErr] = useState(null);
   const [year, setYear] = useState(meta.years[meta.years.length - 1]);
   const [measure, setMeasure] = useState('tm');
@@ -34,9 +35,9 @@ export default function HospitalMap({ meta, route, onHospital }) {
   const rows = useMemo(() => {
     if (!H || !Y) return [];
     const T = new Set(types), out = [];
-    Y.byIdx.forEach((r, i) => { const h = H[i]; if (h && T.has(h.t)) out.push({ ...r, h, q: QD ? QD.h[h.c] : null }); });
+    Y.byIdx.forEach((r, i) => { const h = H[i]; if (h && T.has(h.t)) out.push({ ...r, h, q: QD ? QD.h[h.c] : null, ip: IPD ? IPD.h[h.c] : null }); });
     return out;
-  }, [H, Y, types, QD]);
+  }, [H, Y, types, QD, IPD]);
   const byCounty = useMemo(() => { const o = {}; rows.forEach(r => { if (r.h.f) (o[r.h.f] = o[r.h.f] || []).push(r); }); return o; }, [rows]);
   const byState = useMemo(() => { const o = {}; rows.forEach(r => { const f = ST_FIPS[r.h.s]; if (f) (o[f] = o[f] || []).push(r); }); return o; }, [rows]);
   const cAgg = useMemo(() => Object.fromEntries(Object.entries(byCounty).map(([k, L]) => [k, rollup(L)])), [byCounty]);
