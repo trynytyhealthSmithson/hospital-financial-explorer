@@ -12,10 +12,10 @@ const REGION = {
 const STATES = Object.values(REGION).flat().sort();
 // Numeric filters: [key, label, unit]. Percent filters are entered as percents.
 const RANGES = [['tm', 'Total margin', '%'], ['pm', 'Patient service margin', '%'], ['dcoh', 'Days cash on hand', 'days'], ['occ', 'Occupancy', '%'],
-  ['mcr', 'Original Medicare share of days', '%'], ['mall', 'Medicare share of days, including Medicare Advantage (2022+)', '%'], ['mapen', 'Medicare Advantage share of Medicare days (2022+)', '%'], ['mcd', 'Medicaid share of days', '%'], ['npr', 'Net patient revenue', '$M'], ['beds', 'Beds', ''], ['dtm', 'Change in total margin over 3 years', 'pts'],
+  ['mcr', 'Original Medicare share of days', '%'], ['mall', 'Medicare share of days, including Medicare Advantage (2022+)', '%'], ['mapen', 'Medicare Advantage share of Medicare days (2022+)', '%'], ['mmm', 'Medicare fee-for-service inpatient margin (2022+)', '%'], ['mcd', 'Medicaid share of days', '%'], ['npr', 'Net patient revenue', '$M'], ['beds', 'Beds', ''], ['dtm', 'Change in total margin over 3 years', 'pts'],
   ['cmi', 'Case mix index', ''], ['hrrp', 'Readmissions penalty, FY 2027', '%'],
   ['star', 'CMS star rating', '1 to 5'], ['tps', 'Value-based purchasing score', '0 to 100'], ['err_hi', 'Readmission conditions above expected', 'count']];
-const PCT = new Set(['tm', 'pm', 'occ', 'mcr', 'mall', 'mapen', 'mcd', 'dtm', 'hrrp']);
+const PCT = new Set(['tm', 'pm', 'occ', 'mcr', 'mall', 'mapen', 'mmm', 'mcd', 'dtm', 'hrrp']);
 const PRESETS = [
   ['Critical access hospitals losing money', { t: 'CAH', tm_max: '0' }],
   ['Acute care hospitals with under 30 days of cash', { t: 'STH', dcoh_max: '30' }],
@@ -60,7 +60,7 @@ export default function Screener({ meta, query, onHospital }) {
       if (F.hacp && qq.hacpen !== 1) return;
       const p = Y3 && Y3.byIdx.get(i);
       const x = { ...r, h, mcr: r.days ? r.mcr_days / r.days : null, mcd: r.days ? r.mcd_days / r.days : null,
-        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
+        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
       for (const [k] of RANGES) {
         const lo = F[k + '_min'], hi = F[k + '_max']; if ((lo == null || lo === '') && (hi == null || hi === '')) continue;
         let v = x[k]; if (v == null) return;
@@ -109,8 +109,8 @@ export default function Screener({ meta, query, onHospital }) {
 
       <ChartCard title={!H || !Y ? 'Loading…' : `${fmtInt(rows.length)} hospitals match`} csvName={`hospital-screen-${year}`}
         sub={!H || !Y ? '' : `${year} cost reports${active ? `, ${active} ${active === 1 ? 'filter' : 'filters'}` : ''}. Median total margin of these hospitals: ${fmtPct(median(tms))}. The 3-year change compares with ${year - 3}. The page address keeps your filters, so you can bookmark or share this screen.`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'flagged'],
-          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.flag ? 'yes' : 'no'])]}>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'flagged'],
+          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.flag ? 'yes' : 'no'])]}>
         <div style={{ overflow: 'auto', maxHeight: 620 }}>
           <table className="cm-table"><thead><tr>
             {COLS.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}<th>Type</th></tr></thead>

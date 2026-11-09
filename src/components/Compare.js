@@ -67,7 +67,7 @@ export default function Compare({ meta, ids }) {
   // Payer mix including managed care and Medicare add-ons, from the full cost report files (index: [all Medicare, MA, all Medicaid, Medicaid managed care, MA share of Medicare, add-ons])
   const hx = HX && HX.years[year];
   const HROWS = [['Medicare share of days, including Medicare Advantage', 0, v => fmtPct(v, 0)], ['Medicare Advantage share of Medicare days', 4, v => fmtPct(v, 0)],
-    ['Medicaid share of days, including managed care', 2, v => fmtPct(v, 0)], ['Medicare add-on payments (IME, DSH, uncompensated care, GME, outliers)', 5, v => fmtUsdM(v)]];
+    ['Medicaid share of days, including managed care', 2, v => fmtPct(v, 0)], ['Medicare add-on payments (IME, DSH, uncompensated care, GME, outliers)', 5, v => fmtUsdM(v)], ['Medicare fee-for-service inpatient margin', 6, v => fmtPct(v)]];
   return (
     <div>
       <div className="card" style={{ padding: '14px 16px', marginBottom: 14 }}>
@@ -100,8 +100,8 @@ export default function Compare({ meta, ids }) {
                 {[['Case mix index', p => (p.cmi != null ? p.cmi.toFixed(2) : 'n/a'), `${IPD.meta.cmi_pct[10].toFixed(2)} (national)`], ['Wage index', p => (p.wi != null ? p.wi.toFixed(3) : 'n/a'), ''], ['DSH patient percentage', p => fmtPct(p.dshpct), ''],
                   ['Value-based purchasing adjustment', p => fmtAdj(p.vbp_f), ''], ['Readmissions penalty', p => fmtAdj(p.hrrp_f), '']].map(([l, f, m]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{IPD.h[h.c] ? f(IPD.h[h.c]) : 'not in PPS'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{m}</td></tr>)}</>}
               {hx && <><tr className="sub"><td colSpan={hs.length + 2}>Payer mix and Medicare add-ons, full cost report {year}</td></tr>
-                {HROWS.map(([l, i, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => { const r = hx[h.c]; const v = r ? r[i] : null; return <td key={h.c} className="n">{r ? (i === 4 && !r[1] ? 'not reported' : v == null || (i === 5 && !v) ? (i === 5 ? 'none' : 'n/a') : f(v)) : 'no report'}</td>; })}
-                  <td className="n" style={{ color: 'var(--gray-600)' }}>{i === 4 && HX.meta.ma_pen[year] ? `${fmtPct(HX.meta.ma_pen[year], 0)} (national)` : ''}</td></tr>)}</>}</tbody></table></div>
+                {HROWS.map(([l, i, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => { const r = hx[h.c]; const v = r ? r[i] : null; return <td key={h.c} className="n">{r ? (i === 4 && !r[1] ? 'not reported' : v == null || (i === 5 && !v) ? (i === 5 ? 'none' : i === 6 ? 'not in PPS' : 'n/a') : f(v)) : 'no report'}</td>; })}
+                  <td className="n" style={{ color: 'var(--gray-600)' }}>{i === 4 && HX.meta.ma_pen[year] ? `${fmtPct(HX.meta.ma_pen[year], 0)} (national)` : i === 6 && HX.meta.mm_margin[year] != null ? `${fmtPct(HX.meta.mm_margin[year])} (all PPS hospitals)` : ''}</td></tr>)}</>}</tbody></table></div>
         </ChartCard>
 
         <ChartCard title={`${TREND[tk][0]}, ${meta.years[0]} to ${meta.years[meta.years.length - 1]}`} style={{ marginTop: 14 }} filename={`compare-trend-${tk}`}
