@@ -3,6 +3,7 @@ import HospitalMap from './components/HospitalMap';
 import Overview from './components/Overview';
 import Screener from './components/Screener';
 import Compare from './components/Compare';
+import { SystemList, SystemPage } from './components/Systems';
 import HospitalProfile from './components/HospitalProfile';
 import Methodology from './components/Methodology';
 import { loadMeta } from './data';
@@ -13,9 +14,10 @@ const NAV = [
   { id: 'map', label: 'Hospital Map', section: 'Explore' },
   { id: 'screener', label: 'Hospital Screener', section: 'Explore' },
   { id: 'compare', label: 'Compare Hospitals', section: 'Explore' },
+  { id: 'systems', label: 'Health Systems', section: 'Explore' },
   { id: 'methodology', label: 'Methodology', section: 'Reference' },
 ];
-const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', compare: 'Compare Hospitals', h: 'Hospital Profile', methodology: 'Methodology' };
+const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', compare: 'Compare Hospitals', systems: 'Health Systems', sys: 'Health System', h: 'Hospital Profile', methodology: 'Methodology' };
 const APP = 'Hospital Financial Explorer';
 
 // Hash routes: #overview, #map, #map/OH, #map/39061, #map/area/39061,21015, #h/360180, #screener?t=CAH&tm_max=0, #methodology
@@ -42,7 +44,7 @@ export default function App() {
   useEffect(() => {
     const apply = () => {
       const r = parseHash(); setRoute(r);
-      if (r.page !== 'h') document.title = `${PAGE_TITLES[r.page]} | ${APP} | TRYNYTY health:enablement`;
+      if (r.page !== 'h' && r.page !== 'sys') document.title = `${PAGE_TITLES[r.page]} | ${APP} | TRYNYTY health:enablement`;
       if (typeof window.gtag === 'function') window.gtag('event', 'page_view', { page_title: PAGE_TITLES[r.page], page_location: window.location.href });
     };
     apply(); window.addEventListener('hashchange', apply);
@@ -53,7 +55,7 @@ export default function App() {
 
   const setPage = useCallback(p => { window.location.hash = `#${p}`; setDrawerOpen(false); }, []);
   const onHospital = useCallback(c => { window.location.hash = `#h/${c}`; }, []);
-  const active = route.page === 'h' ? 'map' : route.page;
+  const active = route.page === 'h' ? 'map' : route.page === 'sys' ? 'systems' : route.page;
   const sections = [...new Set(NAV.map(n => n.section))];
   const nav = (
     <nav className="sidebar-nav">{sections.map(section => (
@@ -94,6 +96,8 @@ export default function App() {
         <div className="page-content">
           {!meta ? <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div> : <>
             {route.page === 'overview' && <Overview meta={meta} setPage={setPage} />}
+            {route.page === 'systems' && <SystemList meta={meta} />}
+            {route.page === 'sys' && <SystemPage key={route.id} id={route.id} meta={meta} />}
             {route.page === 'compare' && <Compare meta={meta} ids={route.id} />}
             {route.page === 'screener' && <Screener meta={meta} query={route.q} onHospital={onHospital} />}
             {route.page === 'map' && <HospitalMap key={route.id || 'us'} meta={meta} route={route} onHospital={onHospital} />}

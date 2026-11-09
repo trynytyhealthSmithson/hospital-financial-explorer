@@ -1,0 +1,108 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import ChartCard from './ChartCard';
+import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
+import { titleCase, countyTitle } from './HospitalMap';
+import { loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+
+const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
+
+export function SystemList({ meta }) {
+  const [S, setS] = useState(null), [q, setQ] = useState(''), [sort, setSort] = useState('npr');
+  useEffect(() => { loadSystems().then(setS); }, []);
+  const Ly = String(meta.years[meta.years.length - 1]);
+  const rows = useMemo(() => (S ? Object.entries(S).map(([id, s]) => ({ id, ...s, ...(s.y && s.y[Ly] ? s.y[Ly] : {}), nh: s.h.length })) : []), [S, Ly]);
+  if (!S) return <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div>;
+  const ql = q.trim().toLowerCase();
+  const list = rows.filter(r => !ql || r.n.toLowerCase().includes(ql) || (r.ci || '').toLowerCase().includes(ql) || r.st.join(' ').toLowerCase().includes(ql))
+    .sort((a, b) => (sort === 'n' ? a.n.localeCompare(b.n) : (b[sort] ?? -1e15) - (a[sort] ?? -1e15)));
+  const C = [['n', 'System'], ['nh', 'Hospitals'], ['states', 'States'], ['beds', 'Beds'], ['npr', 'Net patient revenue'], ['tm', 'Combined total margin'], ['tm_med', 'Median hospital margin']];
+  return (
+    <ChartCard title={`${fmtInt(rows.length)} health systems with two or more hospitals`} sub={`${Ly} cost reports for their member hospitals. ${NOTE}`}
+      headerRight={<input className="cm-search" placeholder="Find a system by name, city or state" value={q} onChange={e => setQ(e.target.value)} />}
+      csvName={`health-systems-${Ly}`} csv={() => [['system_id', 'system', 'hq_city', 'hq_state', 'hospitals', 'states', 'beds', 'net_patient_revenue', 'net_income', 'combined_total_margin', 'median_hospital_margin'], ...list.map(r => [r.id, r.n, r.ci, r.s, r.nh, r.st.join(' '), r.beds, r.npr, r.ni, r.tm, r.tm_med])]}>
+      <div style={{ overflow: 'auto', maxHeight: 640 }}><table className="cm-table"><thead><tr>
+        {C.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => k !== 'states' && setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}</tr></thead>
+        <tbody>{list.map(r => <tr key={r.id}><td><a href={`#sys/${r.id}`}>{r.n}</a>{r.ci && <span className="cm-sttag">{titleCase(r.ci)}, {r.s}</span>}</td><td className="n">{r.nh}</td>
+          <td className="n" style={{ fontSize: 11 }}>{r.st.length > 4 ? `${r.st.length} states` : r.st.join(', ')}</td><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td>
+          <td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.tm_med)}</td></tr>)}</tbody></table></div>
+    </ChartCard>
+  );
+}
+
+export function SystemPage({ id, meta }) {
+  const [S, setS] = useState(null), [H, setH] = useState(null), [Y, setY] = useState(null), [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null);
+  const mapRef = useRef(null);
+  const Ly = meta.years[meta.years.length - 1];
+  useEffect(() => { Promise.all([loadSystems(), loadHospitals(), loadYear(Ly), loadGeo(), loadMarketsMeta()]).then(([s, h, y, g, mm]) => { setS(s); setH(h); setY(y); setG(g); setMM(mm);
+    loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, [Ly]);
+  const sys = S && S[id];
+  useEffect(() => { if (sys) document.title = `${sys.n} | Hospital Financial Explorer | TRYNYTY health:enablement`; }, [sys]);
+  const members = useMemo(() => new Set(sys ? sys.h : []), [sys]);
+  // System share of each county's Medicare inpatient cases (patient origin)
+  const cty = useMemo(() => {
+    if (!M || !sys) return [];
+    return Object.entries(M.cty).map(([f, L]) => { let t = 0, me = 0; L.forEach(([c, n]) => { t += n; if (members.has(c)) me += n; }); return { f, t, me, sh: t ? me / t : 0 }; })
+      .filter(r => r.me > 0).sort((a, b) => b.me - a.me);
+  }, [M, sys, members]);
+  const shown = useMemo(() => cty.filter(r => r.sh >= 0.02 || r.me >= 100), [cty]);
+  const breaks = useMemo(() => [...new Set(quantileBreaks(shown.map(r => r.sh), 6).map(v => Math.round(v * 1000) / 1000))], [shown]);
+  useEffect(() => { if (G && mapRef.current && shown.length) { const s = new Set(shown.slice(0, 80).map(r => r.f)); mapRef.current.zoomTo(padBounds(unionBounds(G.counties.filter(c => s.has(c.id)).map(c => c.b)), 0.15)); } }, [G, shown]);
+
+  if (!S || !H || !Y || !G || !MM) return <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div>;
+  if (!sys) return <div className="card" style={{ padding: 24 }}>No health system with id {id}. <a href="#systems">All systems</a></div>;
+  const byC = Object.fromEntries(H.map((h, i) => [h.c, { ...h, i }]));
+  const years = meta.years.filter(y => sys.y && sys.y[String(y)]);
+  const L = sys.y[String(Ly)] || {};
+  const trend = years.map(y => { const r = sys.y[String(y)]; return { y, tm: r.tm == null ? null : +(r.tm * 100).toFixed(1), med: r.tm_med == null ? null : +(r.tm_med * 100).toFixed(1), npr: +(r.npr / 1e9).toFixed(2) }; });
+  const hosp = sys.h.map(c => ({ h: byC[c], r: Y.byIdx.get(byC[c].i) })).sort((a, b) => ((b.r && b.r.npr) || 0) - ((a.r && a.r.npr) || 0));
+  const fmap = Object.fromEntries(cty.map(r => [r.f, r]));
+  const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
+
+  return (
+    <div>
+      <div className="card" style={{ padding: '16px 18px', marginBottom: 14 }}>
+        <div className="cm-kicker">Health system · {sys.h.length} hospitals in {sys.st.length} {sys.st.length === 1 ? 'state' : 'states'}{sys.ci ? ` · Headquartered in ${titleCase(sys.ci)}, ${sys.s}` : ''}</div>
+        <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{sys.n}</h1>
+        <div style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}><a href="#systems">All health systems</a>{sys.h.length <= 5 && <a href={`#compare/${sys.h.join(',')}`}>Compare its hospitals</a>}</div>
+      </div>
+      <div className="hp-grid" style={{ marginBottom: 14 }}>
+        <div className="hp-kpi"><b>{fmtUsdM(L.npr)}</b><span>net patient revenue, {Ly}</span><i>{fmtInt(L.beds)} beds, {fmtInt(L.dis)} discharges</i></div>
+        <div className="hp-kpi"><b style={{ color: L.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(L.tm)}</b><span>combined total margin</span><i>Median member hospital {fmtPct(L.tm_med)}</i></div>
+        <div className="hp-kpi"><b>{fmtPct(L.pm)}</b><span>combined patient service margin</span></div>
+        <div className="hp-kpi"><b>{fmtUsdM(L.ni)}</b><span>net income of member hospitals</span><i>From hospital cost reports; system-level items are not included</i></div>
+      </div>
+      <div className="cm-grid">
+        <ChartCard title="Margins over time" sub="Combined total margin of member hospitals (revenue-weighted) and the median member hospital." filename={`system-${id}-margins`}
+          csv={() => [['year', 'combined_total_margin_pct', 'median_hospital_margin_pct', 'net_patient_revenue_billions'], ...trend.map(t => [t.y, t.tm, t.med, t.npr])]}>
+          <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+            <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line dataKey="tm" name="Combined total margin" stroke="var(--teal-dark)" strokeWidth={2.4} /><Line dataKey="med" name="Median member hospital" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.6} />
+          </LineChart></ResponsiveContainer></div>
+        </ChartCard>
+        <ChartCard title={`Service lines, ${MM.sl_years[MM.sl_years.length - 1]}`} sub="Original Medicare discharges at member hospitals, grouped from MS-DRGs."
+          csvName={`system-${id}-service-lines`} csv={() => [['service_line', 'discharges', 'mix'], ...lines.map(r => [MM.sl[r.k], r.d, r.mix])]}>
+          <div style={{ overflow: 'auto', maxHeight: 240 }}><table className="cm-table"><tbody>{lines.sort((a, b) => b.d - a.d).map(r => <tr key={r.k}><td>{MM.sl[r.k]}</td><td className="n">{fmtInt(r.d)}</td><td className="n">{fmtPct(r.mix)}</td></tr>)}</tbody></table></div>
+        </ChartCard>
+      </div>
+      <ChartCard title={`Market share, ${MM.hsaf_years[MM.hsaf_years.length - 1]}`} style={{ marginTop: 14 }} png csvName={`system-${id}-markets`}
+        sub="The system's share of each county's Medicare inpatient cases (Original Medicare and Medicare Advantage, reported cases), all member hospitals combined. Counties where it has at least 2% or 100 cases are shaded."
+        csv={() => [['county_fips', 'county', 'county_cases', 'system_cases', 'system_share'], ...cty.map(r => [r.f, countyTitle(G, r.f), r.t, r.me, r.sh])]}>
+        <div className="cm-grid">
+          {M ? <UsMap ref={mapRef} geo={G} counties={shown.map(r => r.f)} countyFill={f => colorFor(fmap[f] ? fmap[f].sh : null, breaks)} stateFill={() => '#f4f6f8'}
+            tip={(k, f) => (k === 'c' && fmap[f] ? <><b>{countyTitle(G, f)}</b><br />{fmtPct(fmap[f].sh)} of {fmtInt(fmap[f].t)} cases<br />{fmtInt(fmap[f].me)} at {sys.n} hospitals</> : null)}
+            legend={<SeqLegend label="System share of county cases" breaks={breaks} fmt={v => fmtPct(v, 0)} />} /> : <div style={{ padding: 30, color: 'var(--gray-500)' }}>Loading…</div>}
+          <div style={{ overflow: 'auto', maxHeight: 460 }}><table className="cm-table"><thead><tr><th>County</th><th className="n">System cases</th><th className="n">Share</th></tr></thead>
+            <tbody>{cty.slice(0, 40).map(r => <tr key={r.f}><td><a href={`#map/${r.f}`}>{countyTitle(G, r.f)}</a></td><td className="n">{fmtInt(r.me)}</td><td className="n">{fmtPct(r.sh)}</td></tr>)}</tbody></table></div>
+        </div>
+      </ChartCard>
+      <ChartCard title={`Member hospitals, ${Ly}`} style={{ marginTop: 14 }} csvName={`system-${id}-hospitals-${Ly}`}
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh])]}>
+        <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th></tr></thead>
+          <tbody>{hosp.map(({ h, r }) => <tr key={h.c} style={r && r.flag ? { color: 'var(--gray-500)' } : undefined}><td><a href={`#h/${h.c}`}>{titleCase(h.n)}</a><span className="cm-sttag">{titleCase(h.ci || '')}, {h.s}</span></td><td>{meta.ftype[h.t]}</td>
+            {r ? <><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td><td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td></> : <td colSpan={5} style={{ color: 'var(--gray-500)' }}>No {Ly} report</td>}</tr>)}</tbody></table></div>
+        <p className="cm-note">{NOTE} Combined figures add up member hospitals&apos; own cost reports, so they leave out the system&apos;s physician groups, insurance plans, investments and other businesses, and will not match a system&apos;s consolidated financial statements.</p>
+      </ChartCard>
+    </div>
+  );
+}

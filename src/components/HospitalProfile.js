@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
 import ServiceArea from './ServiceArea';
-import { loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
+import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
 const KPIS = [
@@ -41,6 +41,8 @@ const UROWS = [['Beds', 'beds', fmtInt], ['Discharges', 'dis', fmtInt], ['Medica
 export default function HospitalProfile({ ccn, meta }) {
   const [H, setH] = useState(null), [D, setD] = useState(null), [P, setP] = useState(null), [err, setErr] = useState(null);
   const [peerKey, setPeerKey] = useState('bb');
+  const [SY, setSY] = useState(null);
+  useEffect(() => { loadSystems().then(setSY); }, []);
   const h = useMemo(() => (H ? H.find(x => x.c === ccn) : null), [H, ccn]);
   useEffect(() => { Promise.all([loadHospitals(), loadPeers()]).then(([a, b]) => { setH(a); setP(b); }).catch(e => setErr(String(e))); }, []);
   useEffect(() => { if (h) loadState(h.s || 'NA').then(d => setD(d[ccn])).catch(e => setErr(String(e))); }, [h, ccn]);
@@ -83,6 +85,7 @@ export default function HospitalProfile({ ccn, meta }) {
         <div className="cm-kicker">{meta.ftype[h.t]} · {meta.ctrl[h.g]} · {h.ru === 'R' ? 'Rural' : 'Urban'}{h.rc === 'R' ? ' (reclassified as rural for Medicare payment)' : h.rc === 'U' ? ' (reclassified as urban for Medicare payment)' : ''}{h.te !== 'none' ? ` · ${h.te === 'major' ? 'Major' : 'Minor'} teaching` : ''} · CCN {ccn}</div>
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{titleCase(h.n)}</h1>
         <div style={{ color: 'var(--gray-600)', fontSize: 14 }}>{loc}{D.county ? ` · ${titleCase(D.county)} County` : ''}</div>
+        {h.sy && SY && SY[h.sy] && <div style={{ fontSize: 14, marginTop: 4 }}>Part of <a href={`#sys/${h.sy}`}><b>{SY[h.sy].n}</b></a> ({SY[h.sy].h.length} hospitals)</div>}
         <div style={{ marginTop: 8, fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           {h.f && <a href={`#map/${h.f}`}>Other hospitals in this county</a>}
           {h.f && <a href={`${MA_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">Medicare Advantage in this county</a>}

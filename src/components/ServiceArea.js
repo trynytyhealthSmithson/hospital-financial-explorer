@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd } from '../data';
+import { loadSystems, loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd } from '../data';
 
 // Same projection as the us-atlas Albers county file the maps use
 const proj = geoAlbersUsa().scale(1300).translate([487.5, 305]);
@@ -13,6 +13,8 @@ export default function ServiceArea({ ccn, h }) {
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [S, setS] = useState(null), [Z, setZ] = useState(null), [H, setH] = useState(null), [O, setO] = useState(null);
   const [y, setY] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null), [SL0, setSL0] = useState(null);
   const mapRef = useRef(null);
+  const [SY, setSY] = useState(null);
+  useEffect(() => { loadSystems().then(setSY); }, []);
   useEffect(() => {
     Promise.all([loadGeo(), loadMarketsMeta(), loadSA(h.s || 'NA'), loadZips(), loadHospitals(), loadOthers()]).then(([g, mm, sa, z, hh, o]) => {
       setG(g); setMM(mm); setZ(z); setH(hh); setO(o); const s = sa[ccn] || null; setS(s);
@@ -77,7 +79,7 @@ export default function ServiceArea({ ccn, h }) {
           <div className="cm-kicker" style={{ marginBottom: 6 }}>Competitors in its primary service area counties, {y}</div>
           {comp && <div style={{ overflow: 'auto', maxHeight: 380 }}><table className="cm-table"><thead><tr><th>Hospital</th><th className="n">Cases</th><th className="n">Share</th></tr></thead>
             <tbody>{comp.rows.slice(0, 15).map(r => <tr key={r.c} style={r.c === ccn ? { background: 'var(--teal-light)', fontWeight: 600 } : undefined}>
-              <td>{byC[r.c] && r.c !== ccn ? <a href={`#h/${r.c}`}>{name(r.c)}</a> : name(r.c)}</td><td className="n">{fmtInt(r.n)}</td><td className="n">{fmtPct(r.sh)}</td></tr>)}</tbody></table></div>}
+              <td>{byC[r.c] && r.c !== ccn ? <a href={`#h/${r.c}`}>{name(r.c)}</a> : name(r.c)}{byC[r.c] && byC[r.c].sy && SY && SY[byC[r.c].sy] && <span className="cm-sttag" style={{ color: byC[r.c].sy === h.sy ? 'var(--teal-dark)' : undefined }}>{SY[byC[r.c].sy].n}</span>}</td><td className="n">{fmtInt(r.n)}</td><td className="n">{fmtPct(r.sh)}</td></tr>)}</tbody></table></div>}
           <div style={{ height: 150, marginTop: 10 }}><ResponsiveContainer><LineChart data={trend} margin={{ top: 6, right: 8, left: -10, bottom: 0 }}>
             <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
             <Tooltip formatter={v => fmtInt(v) + ' cases'} /><Line dataKey="cases" name="Reported cases" stroke="var(--teal-dark)" strokeWidth={2} />

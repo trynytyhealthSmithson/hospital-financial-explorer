@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.3', date: 'November 2026', items: [
+      'Health systems from the AHRQ Compendium (2023): a list of 478 multi-hospital systems, and a page for each with combined revenue and margins over time, member hospitals, service lines and a map of the system\u2019s market share by county.',
+      'Market share by health system: the area market table can group hospitals by system, HHI is shown by system and by hospital, and each hospital profile names its system and the systems of its competitors.',
+    ],
+  },
+  {
     version: 'Beta 1.2', date: 'November 2026', items: [
       'Overview page: national trends in margins, hospitals losing money, cash and ownership from 2016 to 2024, and a sortable state table.',
       'Hospital screener: filter every hospital by type, region, state, ownership, location, teaching status and ranges of margin, cash, occupancy, payer mix, revenue, beds and 3-year margin change, with starting presets. Filters stay in the page address so a screen can be shared.',

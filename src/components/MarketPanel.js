@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadMarketsMeta, loadMkt, loadSL, loadOthers, marketShare, hhiLabel, fmtInt, fmtPct, fmtPts, fmtUsd } from '../data';
+import { loadMarketsMeta, loadMkt, loadSL, loadOthers, loadSystems, marketShare, hhiLabel, fmtInt, fmtPct, fmtPts, fmtUsd } from '../data';
 
 /**
  * Market views for a county, state or selected area.
@@ -9,7 +9,8 @@ import { loadMarketsMeta, loadMkt, loadSL, loadOthers, marketShare, hhiLabel, fm
  * 2. Service lines: what hospitals located in the area treat (Original Medicare discharges by DRG).
  */
 export default function MarketPanel({ fips, scopeName, H, onHospital }) {
-  const [MM, setMM] = useState(null), [O, setO] = useState(null);
+  const [MM, setMM] = useState(null), [O, setO] = useState(null), [SY, setSY] = useState(null), [bySys, setBySys] = useState(false);
+  useEffect(() => { loadSystems().then(setSY); }, []);
   const [y, setY] = useState(null), [M, setM] = useState(null), [Mp, setMp] = useState(null);
   const [sy, setSy] = useState(null), [SLd, setSLd] = useState(null), [line, setLine] = useState(null);
   useEffect(() => { Promise.all([loadMarketsMeta(), loadOthers()]).then(([m, o]) => { setMM(m); setO(o); setY(m.hsaf_years[m.hsaf_years.length - 1]); setSy(m.sl_years[m.sl_years.length - 1]); }); }, []);
@@ -17,8 +18,11 @@ export default function MarketPanel({ fips, scopeName, H, onHospital }) {
   useEffect(() => { if (sy) { setSLd(null); loadSL(sy).then(setSLd); } }, [sy]);
   const byC = useMemo(() => (H ? Object.fromEntries(H.map(h => [h.c, h])) : {}), [H]);
   const fset = useMemo(() => new Set(fips), [fips]);
-  const share = useMemo(() => (M ? marketShare(M, fips) : null), [M, fips]);
-  const prev = useMemo(() => (Mp ? Object.fromEntries(marketShare(Mp, fips).rows.map(r => [r.c, r.sh])) : {}), [Mp, fips]);
+  const grp = useMemo(() => (bySys ? c => (byC[c] && byC[c].sy) || c : null), [bySys, byC]);
+  const share = useMemo(() => (M ? marketShare(M, fips, grp) : null), [M, fips, grp]);
+  const shareSys = useMemo(() => (M ? marketShare(M, fips, c => (byC[c] && byC[c].sy) || c) : null), [M, fips, byC]);
+  const shareHosp = useMemo(() => (M ? marketShare(M, fips) : null), [M, fips]);
+  const prev = useMemo(() => (Mp ? Object.fromEntries(marketShare(Mp, fips, grp).rows.map(r => [r.c, r.sh])) : {}), [Mp, fips, grp]);
   const local = useMemo(() => new Set(H ? H.filter(h => fset.has(h.f)).map(h => h.c) : []), [H, fset]);
 
   // Service lines at hospitals located in the area
@@ -30,36 +34,40 @@ export default function MarketPanel({ fips, scopeName, H, onHospital }) {
     return { tot, rows: MM.sl_order.filter(k => by[k]).map(k => ({ ...by[k], mix: by[k].d / tot, hs: hosp[k].sort((a, b) => b.d - a.d) })) };
   }, [SLd, MM, local]);
 
-  if (!MM || !H) return null;
+  if (!MM || !H || !SY) return null;
   if (!fips.length) return null;
-  const name = c => (byC[c] ? titleCase(byC[c].n) : O && O[c] ? titleCase(O[c][0]) : `Hospital ${c}`);
-  const place = c => (byC[c] ? `${titleCase(byC[c].ci || '')}, ${byC[c].s}` : O && O[c] && O[c][1] ? `${titleCase(O[c][1])}, ${O[c][2]}` : '');
-  const inArea = share ? share.rows.filter(r => local.has(r.c)).reduce((t, r) => t + r.n, 0) : 0;
+  const isSys = c => c[0] === 'S' && SY && SY[c];
+  const name = c => (isSys(c) ? SY[c].n : byC[c] ? titleCase(byC[c].n) : O && O[c] ? titleCase(O[c][0]) : `Hospital ${c}`);
+  const place = c => (isSys(c) ? `${SY[c].h.length} hospitals` : byC[c] ? `${titleCase(byC[c].ci || '')}, ${byC[c].s}` : O && O[c] && O[c][1] ? `${titleCase(O[c][1])}, ${O[c][2]}` : '');
+  const inArea = shareHosp ? shareHosp.rows.filter(r => local.has(r.c)).reduce((t, r) => t + r.n, 0) : 0;
+  const localSys = new Set([...local].map(c => (byC[c] && byC[c].sy) || c));
+  const isLocal = c => (isSys(c) ? localSys.has(c) : local.has(c));
   const scope = scopeName.replace(/^Selected area: /, 'the selected area (') + (scopeName.startsWith('Selected area') ? ')' : '');
   const L = line && lines ? lines.rows.find(r => r.k === line) : null;
 
   return (<>
     <ChartCard title={`Where Medicare patients from ${scope} are admitted`} style={{ marginTop: 14 }}
       sub={`Medicare inpatient cases (Original Medicare and Medicare Advantage) by where the patient lives, calendar ${y}. Share is of reported cases; CMS hides any hospital and ZIP code pair with 10 or fewer cases.`}
-      headerRight={<select value={y || ''} onChange={e => setY(+e.target.value)}>{MM.hsaf_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>}
-      csvName={`market-share-${y}`}
-      csv={share ? () => [['ccn', 'hospital', 'location', 'in_area', 'cases', 'share', 'share_prior_year'], ...share.rows.map(r => [r.c, name(r.c), place(r.c), local.has(r.c) ? 'yes' : 'no', r.n, r.sh, prev[r.c] ?? ''])] : null}>
+      headerRight={<span style={{ display: 'flex', gap: 6, alignItems: 'center' }}><button className={`cm-chip ${!bySys ? 'on' : ''}`} onClick={() => setBySys(false)}>Hospitals</button><button className={`cm-chip ${bySys ? 'on' : ''}`} onClick={() => setBySys(true)}>Health systems</button>
+        <select value={y || ''} onChange={e => setY(+e.target.value)}>{MM.hsaf_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select></span>}
+      csvName={`market-share-${bySys ? 'systems-' : ''}${y}`}
+      csv={share ? () => [['ccn', 'hospital', 'location', 'in_area', 'cases', 'share', 'share_prior_year'], ...share.rows.map(r => [r.c, name(r.c), place(r.c), isLocal(r.c) ? 'yes' : 'no', r.n, r.sh, prev[r.c] ?? ''])] : null}>
       {!share ? <div style={{ padding: 30, color: 'var(--gray-500)' }}>Loading {y}…</div> : share.total === 0 ? <p className="cm-note">No reported cases for these counties.</p> : <>
         <div className="cm-kpis" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           <div><b>{fmtInt(share.total)}</b><span>reported inpatient cases from residents</span></div>
           <div><b>{fmtPct(inArea / share.total, 0)}</b><span>stayed at hospitals located in the area</span></div>
-          <div><b>{fmtInt(share.hhi)}</b><span>HHI, {hhiLabel(share.hhi)}</span></div>
-          <div><b>{fmtInt(share.rows.length)}</b><span>hospitals admitted 11 or more patients from at least one ZIP code</span></div>
+          <div><b>{fmtInt(shareSys.hhi)}</b><span>HHI by health system, {hhiLabel(shareSys.hhi)} (by hospital: {fmtInt(shareHosp.hhi)})</span></div>
+          <div><b>{fmtInt(shareHosp.rows.length)}</b><span>hospitals admitted 11 or more patients from at least one ZIP code</span></div>
         </div>
         <div style={{ overflow: 'auto', maxHeight: 420, marginTop: 10 }}>
-          <table className="cm-table"><thead><tr><th>Hospital</th><th className="n">Cases</th><th className="n">Share</th><th className="n">Change from {y - 1}</th><th>Located</th></tr></thead>
+          <table className="cm-table"><thead><tr><th>{bySys ? 'Health system or hospital' : 'Hospital'}</th><th className="n">Cases</th><th className="n">Share</th><th className="n">Change from {y - 1}</th><th>Located</th></tr></thead>
             <tbody>{share.rows.slice(0, 60).map(r => <tr key={r.c}>
-              <td>{byC[r.c] ? <button className="cm-link" onClick={() => onHospital(r.c)}>{name(r.c)}</button> : name(r.c)}<span className="cm-sttag">{place(r.c)}</span></td>
+              <td>{isSys(r.c) ? <a href={`#sys/${r.c}`}>{name(r.c)}</a> : byC[r.c] ? <button className="cm-link" onClick={() => onHospital(r.c)}>{name(r.c)}</button> : name(r.c)}<span className="cm-sttag">{place(r.c)}</span>{!bySys && byC[r.c] && byC[r.c].sy && SY && SY[byC[r.c].sy] && <span className="cm-sttag" style={{ color: 'var(--teal-dark)' }}>{SY[byC[r.c].sy].n}</span>}</td>
               <td className="n">{fmtInt(r.n)}</td><td className="n">{fmtPct(r.sh)}</td>
               <td className="n" style={{ color: prev[r.c] != null ? (r.sh - prev[r.c] > 0 ? 'var(--teal-dark)' : r.sh - prev[r.c] < 0 ? 'var(--red)' : undefined) : undefined }}>{prev[r.c] != null ? fmtPts(r.sh - prev[r.c]) : 'new'}</td>
-              <td>{local.has(r.c) ? 'In the area' : 'Outside'}</td></tr>)}</tbody></table>
+              <td>{isLocal(r.c) ? (isSys(r.c) ? 'Has hospitals here' : 'In the area') : 'Outside'}</td></tr>)}</tbody></table>
         </div>
-        <p className="cm-note">{fmtInt(share.sup)} more hospital and ZIP code pairs had 1 to 10 cases each and are not counted, so small and distant hospitals are understated. Counties are assigned from each patient&apos;s ZIP code; a ZIP that crosses a county line counts toward its main county. HHI uses the 2023 merger guideline thresholds and treats each hospital separately; system ownership is not yet included.</p>
+        <p className="cm-note">{fmtInt(share.sup)} more hospital and ZIP code pairs had 1 to 10 cases each and are not counted, so small and distant hospitals are understated. Counties are assigned from each patient&apos;s ZIP code; a ZIP that crosses a county line counts toward its main county. HHI uses the 2023 merger guideline thresholds; the health system figure combines hospitals under the same parent (AHRQ Compendium, 2023 membership).</p>
       </>}
     </ChartCard>
 

@@ -151,10 +151,15 @@ export const loadSL = y => load('sl:' + y, `${BASE}/sl/${y}.json`);
 export const loadZips = () => load('zips', `${BASE}/zips.json`);
 export const loadOthers = () => load('others', `${BASE}/others.json`);
 
-/** Sum patient-origin cases by hospital across a set of counties. Returns rows sorted by cases. */
-export function marketShare(mkt, fipsList) {
+export const loadSystems = () => load('systems', `${BASE}/systems.json`);
+
+/**
+ * Sum patient-origin cases across a set of counties, by hospital or, with a group function, by health system.
+ * group(ccn) returns the key to add a hospital's cases to (a system id, or the ccn for stand-alone hospitals).
+ */
+export function marketShare(mkt, fipsList, group) {
   const by = {}; let total = 0, sup = 0;
-  fipsList.forEach(f => { (mkt.cty[f] || []).forEach(([c, n]) => { by[c] = (by[c] || 0) + n; total += n; }); sup += mkt.sup[f] || 0; });
+  fipsList.forEach(f => { (mkt.cty[f] || []).forEach(([c, n]) => { const k = group ? group(c) : c; by[k] = (by[k] || 0) + n; total += n; }); sup += mkt.sup[f] || 0; });
   const rows = Object.entries(by).map(([c, n]) => ({ c, n, sh: total ? n / total : null })).sort((a, b) => b.n - a.n);
   const hhi = rows.reduce((t, r) => t + (r.sh * 100) ** 2, 0);
   return { rows, total, sup, hhi: total ? Math.round(hhi) : null };
