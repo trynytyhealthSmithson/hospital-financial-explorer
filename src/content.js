@@ -1,8 +1,17 @@
 export const DATA_RELEASE = {
   lastUpdated: 'November 9, 2026',
-  source: 'CMS Hospital Provider Cost Report, Hospital Service Area File and Medicare Inpatient by Provider and Service',
+  source: 'CMS Hospital Provider Cost Report and HCRIS cost report files, Hospital Service Area File and Medicare Inpatient by Provider and Service',
 };
 export const RELEASE_NOTES = [
+  {
+    version: 'Beta 1.7', date: 'November 2026', items: [
+      'Payer mix including Medicare Advantage and Medicaid managed care, from the full cost report files (2022 to 2024). The summary file counts only Original Medicare days.',
+      'Medicare add-on payments by year: teaching (IME) for fee-for-service and Medicare Advantage patients, DSH, uncompensated care, direct GME and outliers.',
+      'Costs and charges by department: fully allocated cost, inpatient and outpatient charges and cost-to-charge ratio by department group and by cost center.',
+      'Home office named on each hospital\u2019s cost report, and the report\u2019s settlement status.',
+      'Screener filters and columns for Medicare share including MA and the MA share of Medicare days, a new preset, and new rows in Compare Hospitals.',
+    ],
+  },
   {
     version: 'Beta 1.6', date: 'November 2026', items: [
       'Medicare payment profile (FY 2027 payment rule): case mix index, wage index and reclassification, DSH and uncompensated care, teaching intensity, and each hospital\u2019s value-based purchasing and readmissions payment adjustments.',

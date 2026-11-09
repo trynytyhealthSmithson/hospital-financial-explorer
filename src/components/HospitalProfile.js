@@ -5,6 +5,7 @@ import { titleCase } from './HospitalMap';
 import ServiceArea from './ServiceArea';
 import QualityCard from './Quality';
 import PaymentCard from './Payment';
+import CostReportDetail from './CostReportDetail';
 import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -15,7 +16,7 @@ const KPIS = [
   ['cr', 'Current ratio', v => (v == null ? 'n/a' : v.toFixed(2)), 1, 'Current assets divided by current liabilities.'],
   ['debt', 'Liabilities to assets', v => fmtPct(v, 0), -1, 'Total liabilities divided by total assets.'],
   ['occ', 'Occupancy', v => fmtPct(v, 0), null, 'Inpatient days divided by available bed days.'],
-  ['mcr', 'Original Medicare share of days', v => fmtPct(v, 0), null, 'Original Medicare inpatient days as a share of all inpatient days. Medicare Advantage days are not counted here.'],
+  ['mcr', 'Original Medicare share of days', v => fmtPct(v, 0), null, 'Original Medicare inpatient days as a share of all inpatient days. Medicare Advantage days are not counted here; see the payer mix card below for Medicare including Medicare Advantage.'],
   ['mcd', 'Medicaid share of days', v => fmtPct(v, 0), null, 'Medicaid inpatient days as a share of all inpatient days.'],
   ['npr_ad', 'Net revenue per adjusted discharge', v => fmtUsd(v), null, 'Net patient revenue divided by discharges scaled up for outpatient volume (discharges times total charges over inpatient charges).'],
   ['exp_ad', 'Expense per adjusted discharge', v => fmtUsd(v), -1, 'Operating expense divided by adjusted discharges.'],
@@ -136,6 +137,7 @@ export default function HospitalProfile({ ccn, meta }) {
 
       <QualityCard ccn={ccn} />
       <PaymentCard ccn={ccn} />
+      <CostReportDetail ccn={ccn} st={h.s} />
 
       <ServiceArea ccn={ccn} h={h} />
 
