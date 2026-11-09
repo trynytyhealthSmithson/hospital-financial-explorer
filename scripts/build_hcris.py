@@ -146,7 +146,7 @@ for y in YEARS:
             sh = lambda v: None if v is None else round(v / tot, 4)
             mall = (days[0] or 0) + (days[1] or 0); dall = (days[2] or 0) + (days[3] or 0)
             yi[ccn] = [sh(mall), sh(days[1] or 0), sh(dall), sh(days[3] or 0), round((days[1] or 0) / mall, 4) if mall else None,
-                       round(sum(a.get(k, 0) for k in ('ime', 'ime_ma', 'dsh', 'ucp', 'dgme'))) or None]
+                       round(sum(a.get(k, 0) for k in ('out', 'ime', 'ime_ma', 'dsh', 'ucp', 'dgme'))) or None]
     idx['years'][y] = yi
     print(y, 'reports', len(rpt), 'hospitals', rpt.ccn.nunique(), 'with payer mix', len(yi), flush=True)
 
