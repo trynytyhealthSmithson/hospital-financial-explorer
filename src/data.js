@@ -164,3 +164,20 @@ export function marketShare(mkt, fipsList, group) {
   const hhi = rows.reduce((t, r) => t + (r.sh * 100) ** 2, 0);
   return { rows, total, sup, hhi: total ? Math.round(hhi) : null };
 }
+export const loadVbc = () => load('vbc', `${BASE}/county_vbc.json`);
+
+/**
+ * Medicare Advantage penetration and MSSP ACO share for a set of counties.
+ * weights: optional {fips: cases} to weight counties by a hospital's patients (exposure); without it, counties are pooled.
+ */
+export function vbcExposure(vbc, fipsList, weights) {
+  let el = 0, en = 0, aw = 0, as = 0, w1 = 0, mp = 0, w2 = 0, mm = 0;
+  fipsList.forEach(f => {
+    const r = vbc.c[f]; if (!r) return; const [e, n, ms, asg] = r;
+    if (weights) { const w = weights[f] || 0; if (e && n != null) { w1 += w; mp += w * (n / e); } if (ms != null) { w2 += w; mm += w * ms; } }
+    else { if (e && n != null) { el += e; en += n; } if (ms != null && asg) { aw += asg; as += ms * asg; } }
+  });
+  return weights ? { ma: w1 ? mp / w1 : null, aco: w2 ? mm / w2 : null } : { ma: el ? en / el : null, aco: aw ? as / aw : null };
+}
+
+export const monthLabel = s => { const [y, m] = String(s).split('-'); return m ? `${MONTHS[+m - 1]} ${y}` : String(s); };
