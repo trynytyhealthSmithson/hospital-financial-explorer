@@ -87,6 +87,7 @@ export default function HospitalProfile({ ccn, meta }) {
           {h.f && <a href={`#map/${h.f}`}>Other hospitals in this county</a>}
           {h.f && <a href={`${MA_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">Medicare Advantage in this county</a>}
           {h.f && <a href={`${MSSP_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">ACOs in this county</a>}
+          <a href={`#compare/${ccn}`}>Compare with other hospitals</a>
           <button className="cm-link" onClick={csv}>Download all years (CSV)</button>
         </div>
       </div>
