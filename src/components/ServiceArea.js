@@ -30,7 +30,7 @@ export default function ServiceArea({ ccn, h }) {
   const shareBy = useMemo(() => { if (!M) return {}; const o = {}; Object.keys(cty).forEach(f => { const L = M.cty[f] || []; const t = L.reduce((a, [, n]) => a + n, 0); const me = L.find(([c]) => c === ccn); o[f] = t && me ? me[1] / t : null; }); return o; }, [M, cty, ccn]);
   const shown = useMemo(() => Object.keys(cty).filter(f => cty[f] >= 11 || psaCounties.includes(f)), [cty, psaCounties]);
   const comp = useMemo(() => (M && psaCounties.length ? marketShare(M, psaCounties) : null), [M, psaCounties]);
-  const breaks = useMemo(() => quantileBreaks(shown.map(f => shareBy[f]), 6), [shown, shareBy]);
+  const breaks = useMemo(() => [...new Set(quantileBreaks(shown.map(f => shareBy[f]), 6).map(v => Math.round(v * 1000) / 1000))], [shown, shareBy]);
   useEffect(() => {
     if (!G || !mapRef.current || !psaCounties.length) return;
     const s = new Set(psaCounties); mapRef.current.zoomTo(padBounds(unionBounds(G.counties.filter(c => s.has(c.id)).map(c => c.b)), 0.35));
@@ -68,7 +68,7 @@ export default function ServiceArea({ ccn, h }) {
             countyFill={f => colorFor(shareBy[f], breaks)} stateFill={() => '#f4f6f8'}
             tip={(k, id) => (k === 'c' ? <><b>{countyTitle(G, id)}</b><br />{fmtInt(cty[id] || 0)} cases from here<br />{fmtPct(shareBy[id])} of the county&apos;s reported cases</> : null)}
             overlay={<g pointerEvents="none">{dots.map(d => <circle key={d.z} cx={d.p[0]} cy={d.p[1]} r={0.35 + 1.6 * Math.sqrt(d.n / maxN)} fill={d.a === 1 ? '#0b1829' : d.a === 2 ? '#2fa59f' : '#adb5bd'} fillOpacity={0.75} />)}</g>}
-            legend={<><SeqLegend label="Hospital's share of county cases" breaks={breaks} fmt={v => fmtPct(v, 0)} />
+            legend={<><SeqLegend label="Hospital's share of county cases" breaks={breaks} fmt={v => fmtPct(v, v < 0.2 ? 1 : 0)} />
               <div className="cm-legend"><span><i style={{ background: '#0b1829', borderRadius: 6 }} />primary area ZIP</span><span><i style={{ background: '#2fa59f', borderRadius: 6 }} />secondary</span><span><i style={{ background: '#adb5bd', borderRadius: 6 }} />other</span><span>dot size: cases</span></div></>} />}
         </div>
         <div>
