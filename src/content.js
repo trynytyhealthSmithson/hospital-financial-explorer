@@ -4,6 +4,11 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.0', date: 'November 2026', items: [
+      'Full cost report history from 2016: payer mix with Medicare Advantage, the Medicare inpatient margin, Medicare add-on payments, capital and debt now cover 2016 to 2024 on hospital and system pages, in the screener and in Compare Hospitals.',
+    ],
+  },
+  {
     version: 'Beta 1.9', date: 'November 2026', items: [
       'Health systems: combined Medicare inpatient margin, Medicare share of days including Medicare Advantage, MA share of Medicare days, average age of plant and Medicare add-on payments, as sortable columns on the systems list and on each system page.',
       'Member hospital tables show each hospital\u2019s Medicare inpatient margin and MA share.',

@@ -62,6 +62,8 @@ export function SystemPage({ id, meta }) {
   const hosp = sys.h.map(c => ({ h: byC[c], r: Y.byIdx.get(byC[c].i) })).sort((a, b) => ((b.r && b.r.npr) || 0) - ((a.r && a.r.npr) || 0));
   const fmap = Object.fromEntries(cty.map(r => [r.f, r]));
   const hx = new Set(sys.hx || []);
+  const pc = v => (v == null ? null : +(v * 100).toFixed(1));
+  const mtrend = years.map(y => { const r = sys.y[String(y)] || {}; return { y, mmm: pc(r.mmm), mapen: pc(r.mapen), mall: pc(r.mall), nat: HX ? pc(HX.meta.mm_margin[y]) : null }; });
   const hxv = (c, i) => { const r = HX && HX.years[Ly] && HX.years[Ly][c]; return r ? r[i] : null; };
   const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
 
@@ -95,6 +97,16 @@ export function SystemPage({ id, meta }) {
           <div style={{ overflow: 'auto', maxHeight: 240 }}><table className="cm-table"><tbody>{lines.sort((a, b) => b.d - a.d).map(r => <tr key={r.k}><td>{MM.sl[r.k]}</td><td className="n">{fmtInt(r.d)}</td><td className="n">{fmtPct(r.mix)}</td></tr>)}</tbody></table></div>
         </ChartCard>
       </div>
+      {mtrend.some(t => t.mmm != null || t.mapen != null) && <ChartCard title="Medicare over time" style={{ marginTop: 14 }} filename={`system-${id}-medicare`}
+        sub="Combined Medicare fee-for-service inpatient margin of member hospitals, the all-hospital margin, and the Medicare Advantage share of Medicare inpatient days, from the full cost report files."
+        csv={() => [['year', 'system_medicare_inpatient_margin_pct', 'all_pps_hospitals_margin_pct', 'ma_share_of_medicare_days_pct', 'medicare_share_of_days_pct'], ...mtrend.map(t => [t.y, t.mmm, t.nat, t.mapen, t.mall])]}>
+        <div style={{ height: 250 }}><ResponsiveContainer><LineChart data={mtrend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+          <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
+          <Line dataKey="mmm" name="Medicare inpatient margin" stroke="var(--teal-dark)" strokeWidth={2.4} />
+          <Line dataKey="nat" name="All PPS hospitals" stroke="var(--slate)" strokeWidth={1.4} dot={false} />
+          <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} />
+        </LineChart></ResponsiveContainer></div>
+      </ChartCard>}
       <ChartCard title={`Market share, ${MM.hsaf_years[MM.hsaf_years.length - 1]}`} style={{ marginTop: 14 }} png csvName={`system-${id}-markets`}
         sub="The system's share of each county's Medicare inpatient cases (Original Medicare and Medicare Advantage, reported cases), all member hospitals combined. Counties where it has at least 2% or 100 cases are shaded."
         csv={() => [['county_fips', 'county', 'county_cases', 'system_cases', 'system_share'], ...cty.map(r => [r.f, countyTitle(G, r.f), r.t, r.me, r.sh])]}>
