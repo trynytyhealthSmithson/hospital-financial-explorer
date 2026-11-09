@@ -4,6 +4,13 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.2', date: 'November 2026', items: [
+      'Overview page: national trends in margins, hospitals losing money, cash and ownership from 2016 to 2024, and a sortable state table.',
+      'Hospital screener: filter every hospital by type, region, state, ownership, location, teaching status and ranges of margin, cash, occupancy, payer mix, revenue, beds and 3-year margin change, with starting presets. Filters stay in the page address so a screen can be shared.',
+      'Downloads: every table has a CSV; charts and maps offer PNG and the CSV behind them.',
+    ],
+  },
+  {
     version: 'Beta 1.1', date: 'November 2026', items: [
       'Market share by where patients live: for any county, state or selected area, which hospitals admit its Medicare residents (Original Medicare and Medicare Advantage, 2016 to 2025), how much care stays local, and market concentration.',
       'Service areas on every hospital profile: primary and secondary service area ZIP codes, a map of the hospital\u2019s share by county, competitors in its primary service area, and the trend in cases.',

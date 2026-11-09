@@ -6,3 +6,4 @@ Free explorer of hospital finances from the CMS Hospital Provider Cost Report pu
 - `npm start` / `npm run build` (Create React App).
 
 - `scripts/build_markets.py` builds market share, service areas and service lines from `data/raw/hsaf` (Hospital Service Area File) and `data/raw/inpatient` (Medicare Inpatient Hospitals by Provider and Service). Run it after build_hospitals.py.
+- `scripts/build_overview.py` builds the Overview trend summary; run it after build_hospitals.py.

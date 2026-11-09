@@ -103,7 +103,7 @@ export const hhiLabel = h => (h == null ? '' : h > 1800 ? 'highly concentrated' 
 // ---- Hospital measures ----
 export const FTYPE_ORDER = ['STH', 'CAH', 'CH', 'PH', 'RH', 'LTCH', 'OTH'];
 export const fmtUsd = v => v == null || !isFinite(v) ? 'n/a' : (v < 0 ? '−' : '') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
-export const fmtUsdM = v => v == null || !isFinite(v) ? 'n/a' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(2) + 'B' : (Math.abs(v) / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1) + 'M');
+export const fmtUsdM = v => v == null || !isFinite(v) ? 'n/a' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e12 ? (Math.abs(v) / 1e12).toFixed(2) + 'T' : Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(2) + 'B' : (Math.abs(v) / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1) + 'M');
 export const fmtDays = v => v == null || !isFinite(v) ? 'n/a' : Math.round(v).toLocaleString('en-US') + ' days';
 export const median = a => { const s = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); if (!s.length) return null; const m = s.length / 2; return s.length % 2 ? s[Math.floor(m)] : (s[m - 1] + s[m]) / 2; };
 const sum = (L, k) => L.reduce((t, r) => t + (r[k] || 0), 0);
