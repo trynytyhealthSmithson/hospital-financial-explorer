@@ -1,8 +1,13 @@
 export const DATA_RELEASE = {
   lastUpdated: 'November 9, 2026',
-  source: 'CMS Hospital Provider Cost Report and HCRIS cost report files, Hospital Service Area File and Medicare Inpatient by Provider and Service',
+  source: 'CMS Hospital Provider Cost Report and HCRIS cost report files, Hospital Service Area File and Medicare Inpatient and Outpatient by Provider and Service',
 };
 export const RELEASE_NOTES = [
+  {
+    version: 'Beta 2.1', date: 'November 2026', items: [
+      'Outpatient procedures: Original Medicare outpatient surgery, device implants, endovascular, endoscopy, radiation therapy and observation stays by service line, 2017 to 2024, with the change since 2019 and every procedure group, on hospital profiles, system pages and Compare Hospitals.',
+    ],
+  },
   {
     version: 'Beta 2.0', date: 'November 2026', items: [
       'Full cost report history from 2016: payer mix with Medicare Advantage, the Medicare inpatient margin, Medicare add-on payments, capital and debt now cover 2016 to 2024 on hospital and system pages, in the screener and in Compare Hospitals.',

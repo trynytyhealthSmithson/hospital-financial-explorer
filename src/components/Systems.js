@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+import { loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
 
@@ -35,8 +35,8 @@ export function SystemList({ meta }) {
 export function SystemPage({ id, meta }) {
   const [S, setS] = useState(null), [H, setH] = useState(null), [Y, setY] = useState(null), [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null);
   const mapRef = useRef(null);
-  const [HX, setHX] = useState(null);
-  useEffect(() => { loadHcrisIdx().then(setHX); }, []);
+  const [HX, setHX] = useState(null), [OP, setOP] = useState(null);
+  useEffect(() => { loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); }, []);
   const Ly = meta.years[meta.years.length - 1];
   useEffect(() => { Promise.all([loadSystems(), loadHospitals(), loadYear(Ly), loadGeo(), loadMarketsMeta()]).then(([s, h, y, g, mm]) => { setS(s); setH(h); setY(y); setG(g); setMM(mm);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, [Ly]);
@@ -64,6 +64,8 @@ export function SystemPage({ id, meta }) {
   const hx = new Set(sys.hx || []);
   const pc = v => (v == null ? null : +(v * 100).toFixed(1));
   const mtrend = years.map(y => { const r = sys.y[String(y)] || {}; return { y, mmm: pc(r.mmm), mapen: pc(r.mapen), mall: pc(r.mall), nat: HX ? pc(HX.meta.mm_margin[y]) : null }; });
+  const opl = OP ? (() => { const by = {}; sys.h.forEach(c => Object.entries(OP.h[c] || {}).forEach(([k, r]) => { const b = by[k] || (by[k] = [0, 0, 0]); b[0] += r[0]; b[1] += r[1]; b[2] += r[2] || 0; }));
+    return OP.lines.filter(([k]) => by[k]).map(([k, l]) => ({ k, l, s: by[k][0], p: by[k][1], s0: by[k][2] })).sort((a, b) => b.p - a.p); })() : [];
   const hxv = (c, i) => { const r = HX && HX.years[Ly] && HX.years[Ly][c]; return r ? r[i] : null; };
   const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
 
@@ -106,6 +108,13 @@ export function SystemPage({ id, meta }) {
           <Line dataKey="nat" name="All PPS hospitals" stroke="var(--slate)" strokeWidth={1.4} dot={false} />
           <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} />
         </LineChart></ResponsiveContainer></div>
+      </ChartCard>}
+      {opl.length > 0 && <ChartCard title={`Outpatient procedures, ${OP.meta.latest}`} style={{ marginTop: 14 }} csvName={`system-${id}-outpatient`}
+        sub="Original Medicare outpatient procedures and observation stays at member hospitals (comprehensive APCs), with the change since 2019. Critical access hospitals are not in the file."
+        csv={() => [['service_line', 'services_2019', `services_${OP.meta.latest}`, 'medicare_payment'], ...opl.map(r => [r.l, r.s0, r.s, r.p])]}>
+        <div style={{ overflow: 'auto', maxHeight: 300 }}><table className="cm-table"><thead><tr><th>Service line</th><th className="n">2019</th><th className="n">{OP.meta.latest}</th><th className="n">Change</th><th className="n">Medicare payment</th></tr></thead>
+          <tbody>{opl.map(r => <tr key={r.k}><td>{r.l}</td><td className="n">{r.s0 ? fmtInt(r.s0) : ''}</td><td className="n">{fmtInt(r.s)}</td><td className="n" style={{ color: r.s0 && r.s < r.s0 ? 'var(--red)' : undefined }}>{r.s0 ? fmtPct(r.s / r.s0 - 1, 0) : 'new'}</td><td className="n">{fmtUsdM(r.p)}</td></tr>)}</tbody></table></div>
+        <p className="cm-note">Changes include hospitals that joined or left the system and procedure groups CMS added since 2019.</p>
       </ChartCard>}
       <ChartCard title={`Market share, ${MM.hsaf_years[MM.hsaf_years.length - 1]}`} style={{ marginTop: 14 }} png csvName={`system-${id}-markets`}
         sub="The system's share of each county's Medicare inpatient cases (Original Medicare and Medicare Advantage, reported cases), all member hospitals combined. Counties where it has at least 2% or 100 cases are shaded."

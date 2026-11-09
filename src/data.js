@@ -198,3 +198,5 @@ export const loadIpps = () => load('ipps', `${BASE}/ipps.json`);
 export const fmtAdj = f => (f == null ? 'n/a' : `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)}%`);
 export const loadHcris = st => load('hcris:' + st, `${BASE}/hcris/${st}.json`);
 export const loadHcrisIdx = () => load('hcrisidx', `${BASE}/hcris_idx.json`);
+export const loadOp = st => load('op:' + st, `${BASE}/op/${st}.json`);
+export const loadOpIdx = () => load('opidx', `${BASE}/op_idx.json`);

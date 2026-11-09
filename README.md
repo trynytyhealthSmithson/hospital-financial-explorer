@@ -11,4 +11,5 @@ Free explorer of hospital finances from the CMS Hospital Provider Cost Report pu
 - `scripts/build_vbc_exposure.py <path to ma-enrollment-explorer/public/data/counties.json>` writes county MA penetration and MSSP ACO share for the exposure measures.
 - `scripts/build_quality.py` builds quality and penalty results from `data/raw/quality` (CMS Provider Data Catalog).
 - `scripts/build_ipps.py` builds the Medicare payment profile from the FY 2027 IPPS Impact File (`data/raw/ipps`).
+- `scripts/build_outpatient.py` builds outpatient procedures from `data/raw/outpatient` (Medicare Outpatient Hospitals by Provider and Service, data.cms.gov). Run after `build_hospitals.py`.
 - `scripts/build_hcris.py` builds payer mix with Medicare Advantage, Medicare add-on payments, department costs and home offices from the full HCRIS cost report files (`data/raw/hcris`, from downloads.cms.gov/files/hcris/HOSP10FY<year>.zip; needs `pip install duckdb`). Run after `build_hospitals.py`.
