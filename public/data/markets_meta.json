@@ -1,0 +1,184 @@
+{
+ "hsaf_years": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "sl_years": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024
+ ],
+ "sl": {
+  "tx": "Transplant, ECMO and tracheostomy",
+  "nsurg": "Neurosurgery",
+  "neuro": "Neurology and stroke",
+  "spine": "Spine",
+  "enteye": "Ear, nose, throat and eye",
+  "pulm": "Pulmonary",
+  "csurg": "Cardiac surgery and structural heart",
+  "icard": "Interventional cardiology and electrophysiology",
+  "vasc": "Vascular",
+  "card": "Cardiology, medical",
+  "gsurg": "General and GI surgery",
+  "gimed": "GI and liver, medical",
+  "joint": "Joint replacement",
+  "ortho": "Orthopedics, other",
+  "renal": "Kidney and urology",
+  "women": "Women's health and obstetrics",
+  "onc": "Oncology and hematology",
+  "id": "Infectious disease and sepsis",
+  "bh": "Behavioral health and substance use",
+  "trauma": "Trauma, injury and burns",
+  "other": "Other (skin, endocrine, other medical and surgical)"
+ },
+ "sl_order": [
+  "tx",
+  "nsurg",
+  "neuro",
+  "spine",
+  "enteye",
+  "pulm",
+  "csurg",
+  "icard",
+  "vasc",
+  "card",
+  "gsurg",
+  "gimed",
+  "joint",
+  "ortho",
+  "renal",
+  "women",
+  "onc",
+  "id",
+  "bh",
+  "trauma",
+  "other"
+ ],
+ "coverage": {
+  "2016": {
+   "rows": 1047882,
+   "suppressed_rows": 904468,
+   "reported_cases": 13221647,
+   "cases_with_county": 12971854,
+   "hospitals": 6052
+  },
+  "2017": {
+   "rows": 1069658,
+   "suppressed_rows": 924364,
+   "reported_cases": 13548948,
+   "cases_with_county": 13294106,
+   "hospitals": 6029
+  },
+  "2018": {
+   "rows": 1071991,
+   "suppressed_rows": 926873,
+   "reported_cases": 13541831,
+   "cases_with_county": 13291996,
+   "hospitals": 6009
+  },
+  "2019": {
+   "rows": 1066002,
+   "suppressed_rows": 920056,
+   "reported_cases": 13713666,
+   "cases_with_county": 13437460,
+   "hospitals": 5968
+  },
+  "2020": {
+   "rows": 971504,
+   "suppressed_rows": 836204,
+   "reported_cases": 12067678,
+   "cases_with_county": 11833829,
+   "hospitals": 5950
+  },
+  "2021": {
+   "rows": 1019486,
+   "suppressed_rows": 883743,
+   "reported_cases": 12271631,
+   "cases_with_county": 12032151,
+   "hospitals": 5937
+  },
+  "2022": {
+   "rows": 1129167,
+   "suppressed_rows": 989474,
+   "reported_cases": 12215886,
+   "cases_with_county": 11974645,
+   "hospitals": 7634
+  },
+  "2023": {
+   "rows": 1138717,
+   "suppressed_rows": 995773,
+   "reported_cases": 12745543,
+   "cases_with_county": 12500391,
+   "hospitals": 7606
+  },
+  "2024": {
+   "rows": 1155777,
+   "suppressed_rows": 1008799,
+   "reported_cases": 13512110,
+   "cases_with_county": 13254288,
+   "hospitals": 7535
+  },
+  "2025": {
+   "rows": 1174821,
+   "suppressed_rows": 1023599,
+   "reported_cases": 14143761,
+   "cases_with_county": 13867074,
+   "hospitals": 7452
+  }
+ },
+ "sl_coverage": {
+  "2016": {
+   "hospitals": 3202,
+   "discharges": 7260982
+  },
+  "2017": {
+   "hospitals": 3182,
+   "discharges": 7398125
+  },
+  "2018": {
+   "hospitals": 3152,
+   "discharges": 7193078
+  },
+  "2019": {
+   "hospitals": 3111,
+   "discharges": 6964500
+  },
+  "2020": {
+   "hospitals": 3071,
+   "discharges": 5608636
+  },
+  "2021": {
+   "hospitals": 3055,
+   "discharges": 5252878
+  },
+  "2022": {
+   "hospitals": 3015,
+   "discharges": 5009102
+  },
+  "2023": {
+   "hospitals": 2945,
+   "discharges": 4960325
+  },
+  "2024": {
+   "hospitals": 2906,
+   "discharges": 4952481
+  }
+ },
+ "zip_county": 0.9872,
+ "psa": 0.75,
+ "ssa": 0.9
+}

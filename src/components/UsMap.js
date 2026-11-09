@@ -32,7 +32,7 @@ export function visibleCounties(geo, focusState, area) {
  * selectMode: dragging draws a box; counties whose center falls inside are passed to onSelectBox.
  * Shift-click on a county calls onCounty(id, true) so the caller can add or remove it from an area.
  */
-const UsMap = forwardRef(function UsMap({ geo, mode = 'states', focusState = '', counties, area, selected = null, stateFill, countyFill, onState, onCounty, onSelectBox, selectMode = false, tip, legend, extraButtons }, ref) {
+const UsMap = forwardRef(function UsMap({ geo, mode = 'states', focusState = '', counties, area, selected = null, stateFill, countyFill, onState, onCounty, onSelectBox, selectMode = false, tip, legend, extraButtons, overlay }, ref) {
   const svgRef = useRef(null), gRef = useRef(null), zoomRef = useRef(null), selRef = useRef(selectMode);
   const [hover, setHover] = useState(null);
   const [box, setBox] = useState(null);
@@ -104,6 +104,7 @@ const UsMap = forwardRef(function UsMap({ geo, mode = 'states', focusState = '',
             <path d={geo.nation} className="cm-nat" />
             {areaSet.size > 0 && showCounties.filter(c => areaSet.has(c.id)).map(c => <path key={'a' + c.id} d={c.d} className="cm-area" />)}
             {sel && <path d={sel.d} className="cm-hl" />}
+            {overlay}
           </g>
           {selectMode && <rect width={W} height={H} fill="transparent" style={{ cursor: 'crosshair', touchAction: 'none' }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => setBox(null)} />}
           {box && <rect className="cm-box" x={Math.min(box[0][0], box[1][0])} y={Math.min(box[0][1], box[1][1])} width={Math.abs(box[1][0] - box[0][0])} height={Math.abs(box[1][1] - box[0][1])} />}

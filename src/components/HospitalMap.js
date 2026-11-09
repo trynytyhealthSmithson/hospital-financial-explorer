@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChartCard from './ChartCard';
+import MarketPanel from './MarketPanel';
 import UsMap, { SeqLegend, DivLegend, visibleCounties, unionBounds } from './UsMap';
 import {
   loadGeo, loadHospitals, loadYear, quantileBreaks, colorFor, divBreaks, divColor, fmtInt, fmtPct, fmtUsdM, fmtDays,
-  downloadCSV, ST_FIPS, FIPS_ST, MEASURES, FTYPE_ORDER, rollup, MA_URL, MSSP_URL,
+  ST_FIPS, FIPS_ST, MEASURES, FTYPE_ORDER, rollup, MA_URL, MSSP_URL,
 } from '../data';
 
 const DEFAULT_TYPES = ['STH', 'CAH'];
@@ -115,7 +116,10 @@ export default function HospitalMap({ meta, route, onHospital }) {
       <div className="cm-grid">
         <ChartCard title={`${M.label}, ${area ? 'selected area' : stateFips ? stName(stateFips) : 'United States'}, ${year}`}
           sub={`${M.sub}. ${area ? 'Click a county to list its hospitals; shift-click to add or remove counties.' : stateFips ? 'Click a county to list its hospitals. Counties across the state line are shown too; use Select an area to combine counties from more than one state.' : 'Click a state to see its counties, or use Select an area to drag a box around any market.'}`}
-          filename={`hospitals-${drilled ? 'county' : 'state'}-${measure}-${year}`}>
+          filename={`hospitals-${drilled ? 'county' : 'state'}-${measure}-${year}`}
+          csv={() => [[drilled ? 'county_fips' : 'state', drilled ? 'county' : 'state_name', measure, 'hospitals', 'beds', 'net_patient_revenue'],
+            ...(drilled ? countyIds.map(id => [id, countyTitle(geo, id), val(cAgg[id]), cAgg[id] ? cAgg[id].n : 0, cAgg[id] ? cAgg[id].beds : 0, cAgg[id] ? cAgg[id].npr : 0])
+              : Object.keys(sAgg).sort().map(k => [FIPS_ST[k], stName(k), val(sAgg[k]), sAgg[k].n, sAgg[k].beds, sAgg[k].npr]))]}>
           {!Y ? <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading {year}…</div> :
             <UsMap ref={mapRef} geo={geo} focusState={stateFips} counties={countyIds} area={area} selected={county}
               stateFill={sf => fill(val(sAgg[sf]))} countyFill={id => fill(val(cAgg[id]))}
@@ -148,10 +152,10 @@ export default function HospitalMap({ meta, route, onHospital }) {
 
       <ChartCard title={ql ? `Hospitals matching "${q}"` : `Hospitals in ${scopeName.replace(/^Selected area: /, 'the selected area: ')}`} style={{ marginTop: 14 }}
         sub={`${year} cost reports. Click a column to sort, a hospital for its full profile. Grey rows are left out of combined figures (see the note above).`}
-        headerRight={<span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input className="cm-search" placeholder="Find a hospital by name, city or CCN" value={q} onChange={e => setQ(e.target.value)} />
-          <button className="cm-link" onClick={() => downloadCSV([['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'control', 'beds', 'net_patient_revenue', 'total_revenue', 'net_income', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'excluded_from_combined'],
-            ...list.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.beds, r.npr, r.rev, r.ni, r.tm, r.pm, r.dcoh, r.occ, r.flag ? 'yes' : 'no'])], `hospitals-${county || (area ? 'area' : FIPS_ST[stateFips] || 'us')}-${year}.csv`)}>Download CSV</button></span>}>
+        headerRight={<input className="cm-search" placeholder="Find a hospital by name, city or CCN" value={q} onChange={e => setQ(e.target.value)} />}
+        csvName={`hospitals-${county || (area ? 'area' : FIPS_ST[stateFips] || 'us')}-${year}`}
+        csv={() => ([['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'control', 'beds', 'net_patient_revenue', 'total_revenue', 'net_income', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'excluded_from_combined'],
+            ...list.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.beds, r.npr, r.rev, r.ni, r.tm, r.pm, r.dcoh, r.occ, r.flag ? 'yes' : 'no'])])}>
         <div style={{ overflow: 'auto', maxHeight: 520 }}>
           <table className="cm-table"><thead><tr>
             {COLS.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}
@@ -165,6 +169,10 @@ export default function HospitalMap({ meta, route, onHospital }) {
           {list.length > 400 && <p className="cm-note">Showing 400 of {list.length.toLocaleString()} hospitals. Narrow to a state or county, or download the CSV for all of them.</p>}
         </div>
       </ChartCard>
+
+      {(county || area || stateFips) ? <MarketPanel key={county || (area ? area.join(',') : stateFips)} H={H} onHospital={onHospital} scopeName={scopeName}
+        fips={county ? [county] : area ? area : geo.counties.filter(c => c.id.slice(0, 2) === stateFips).map(c => c.id)} />
+        : <p className="cm-note" style={{ marginTop: 14 }}>Pick a state, click a county or select an area to see where its Medicare patients are admitted and which hospitals lead each service line.</p>}
 
       <p className="cm-note" style={{ marginTop: 10 }}>Source: CMS Hospital Provider Cost Report public use file ({meta.years[0]} to {meta.years[meta.years.length - 1]}), from the Healthcare Cost Report Information System. Cost reports are filed for Medicare and are not audited financial statements. See <a href="#methodology">Methodology</a>.</p>
     </div>

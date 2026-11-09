@@ -30,6 +30,16 @@ export default function Methodology({ meta }) {
       </ul>
       <h3>Areas and totals</h3>
       <p>For a county, state or selected area, dollars, beds and days are added up, and margins and shares are recalculated from those totals, so a large hospital counts for more than a small one. The median hospital is shown alongside, because a few large systems can dominate a combined margin. Peer groups compare a hospital with others of the same type in the same year, split by bed size, ownership, urban or rural location, or teaching status; the bar shows the middle half of peers (25th to 75th percentile).</p>
+      <h3>Market share and service areas</h3>
+      <p>Market share comes from the CMS Hospital Service Area File, which counts each hospital&apos;s Medicare inpatient cases by the ZIP code where the patient lives, for each calendar year from 2016 to 2025. It covers Original Medicare and Medicare Advantage claims, so it reflects where all Medicare patients are admitted, not commercial or Medicaid patients. Share for a county or area is a hospital&apos;s cases from residents of that area divided by all reported cases from those residents, so it measures where people go, not where hospitals sit.</p>
+      <ul>
+        <li>CMS hides any hospital and ZIP code pair with 1 to 10 cases. Most such pairs are distant ZIP codes, but together they hold a meaningful minority of cases, so shares are of reported cases and small or distant hospitals are understated. Each view says how many pairs were hidden.</li>
+        <li>Each ZIP code is assigned to its main county; ZIP codes that cross a county line count entirely toward that county.</li>
+        <li>A hospital&apos;s primary service area is the smallest set of its ZIP codes, largest first, that supplies 75% of its reported cases; the secondary service area extends that to 90%.</li>
+        <li>HHI (the Herfindahl index) uses the 2023 merger guideline thresholds and currently treats each hospital on its own. Hospitals in the same health system will be combined once system membership is added.</li>
+      </ul>
+      <h3>Service lines</h3>
+      <p>Service lines come from the CMS Medicare Inpatient Hospitals by Provider and Service file: Original Medicare discharges and payments by hospital and MS-DRG for 2016 to 2024. DRGs are grouped into about 20 service lines by DRG number (for example, joint replacement is DRGs 461, 462, 466 to 470, 521 and 522). The groupings are approximate. CMS lists a DRG at a hospital only when it had 11 or more discharges, and the file excludes Medicare Advantage, so totals are lower than the service area counts.</p>
       <h3>Definitions</h3>
       <table className="cm-table"><tbody>{DEFS.map(([k, v]) => <tr key={k}><td style={{ fontWeight: 600, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{k}</td><td>{v}</td></tr>)}</tbody></table>
       <h3>Limits</h3>

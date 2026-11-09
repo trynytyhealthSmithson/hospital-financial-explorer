@@ -142,3 +142,20 @@ export const MEASURES = {
   mcd:   { label: 'Medicaid share of inpatient days', sub: 'Medicaid (Title XIX) inpatient days as a share of all inpatient days; mostly fee-for-service Medicaid', fmt: v => fmtPct(v) },
   unc:   { label: 'Uncompensated care', sub: 'Unreimbursed and uncompensated care (charity care, bad debt and Medicaid shortfall) as a share of total costs', fmt: v => fmtPct(v) },
 };
+
+// ---- Markets: patient-origin share, service areas, service lines ----
+export const loadMarketsMeta = () => load('mm', `${BASE}/markets_meta.json`);
+export const loadMkt = y => load('mkt:' + y, `${BASE}/mkt/${y}.json`);
+export const loadSA = st => load('sa:' + st, `${BASE}/sa/${st}.json`);
+export const loadSL = y => load('sl:' + y, `${BASE}/sl/${y}.json`);
+export const loadZips = () => load('zips', `${BASE}/zips.json`);
+export const loadOthers = () => load('others', `${BASE}/others.json`);
+
+/** Sum patient-origin cases by hospital across a set of counties. Returns rows sorted by cases. */
+export function marketShare(mkt, fipsList) {
+  const by = {}; let total = 0, sup = 0;
+  fipsList.forEach(f => { (mkt.cty[f] || []).forEach(([c, n]) => { by[c] = (by[c] || 0) + n; total += n; }); sup += mkt.sup[f] || 0; });
+  const rows = Object.entries(by).map(([c, n]) => ({ c, n, sh: total ? n / total : null })).sort((a, b) => b.n - a.n);
+  const hhi = rows.reduce((t, r) => t + (r.sh * 100) ** 2, 0);
+  return { rows, total, sup, hhi: total ? Math.round(hhi) : null };
+}
