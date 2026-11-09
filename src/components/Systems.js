@@ -11,7 +11,7 @@ export function SystemList({ meta }) {
   const [S, setS] = useState(null), [q, setQ] = useState(''), [sort, setSort] = useState('npr');
   useEffect(() => { loadSystems().then(setS); }, []);
   const Ly = String(meta.years[meta.years.length - 1]);
-  const rows = useMemo(() => (S ? Object.entries(S).map(([id, s]) => ({ id, ...s, ...(s.y && s.y[Ly] ? s.y[Ly] : {}), nh: s.h.length })) : []), [S, Ly]);
+  const rows = useMemo(() => (S ? Object.entries(S).map(([id, s]) => ({ id, ...(s.y && s.y[Ly] ? s.y[Ly] : {}), ...s, nh: s.h.length })) : []), [S, Ly]);
   if (!S) return <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div>;
   const ql = q.trim().toLowerCase();
   const list = rows.filter(r => !ql || r.n.toLowerCase().includes(ql) || (r.ci || '').toLowerCase().includes(ql) || r.st.join(' ').toLowerCase().includes(ql))
