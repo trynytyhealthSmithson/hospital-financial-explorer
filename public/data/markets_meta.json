@@ -112,32 +112,32 @@
    "hospitals": 5937
   },
   "2022": {
-   "rows": 1129167,
-   "suppressed_rows": 989474,
+   "rows": 1042048,
+   "suppressed_rows": 909069,
    "reported_cases": 12215886,
    "cases_with_county": 11974645,
-   "hospitals": 7634
+   "hospitals": 6017
   },
   "2023": {
-   "rows": 1138717,
-   "suppressed_rows": 995773,
+   "rows": 1052912,
+   "suppressed_rows": 916867,
    "reported_cases": 12745543,
    "cases_with_county": 12500391,
-   "hospitals": 7606
+   "hospitals": 6032
   },
   "2024": {
-   "rows": 1155777,
-   "suppressed_rows": 1008799,
+   "rows": 1070884,
+   "suppressed_rows": 931007,
    "reported_cases": 13512110,
    "cases_with_county": 13254288,
-   "hospitals": 7535
+   "hospitals": 6025
   },
   "2025": {
-   "rows": 1174821,
-   "suppressed_rows": 1023599,
+   "rows": 1090357,
+   "suppressed_rows": 946299,
    "reported_cases": 14143761,
    "cases_with_county": 13867074,
-   "hospitals": 7452
+   "hospitals": 6001
   }
  },
  "sl_coverage": {

@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadSystems, loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd } from '../data';
+import { monthLabel, loadVbc, vbcExposure, loadSystems, loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd } from '../data';
 
 // Same projection as the us-atlas Albers county file the maps use
 const proj = geoAlbersUsa().scale(1300).translate([487.5, 305]);
@@ -13,8 +13,8 @@ export default function ServiceArea({ ccn, h }) {
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [S, setS] = useState(null), [Z, setZ] = useState(null), [H, setH] = useState(null), [O, setO] = useState(null);
   const [y, setY] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null), [SL0, setSL0] = useState(null);
   const mapRef = useRef(null);
-  const [SY, setSY] = useState(null);
-  useEffect(() => { loadSystems().then(setSY); }, []);
+  const [SY, setSY] = useState(null), [V, setV] = useState(null);
+  useEffect(() => { loadSystems().then(setSY); loadVbc().then(setV); }, []);
   useEffect(() => {
     Promise.all([loadGeo(), loadMarketsMeta(), loadSA(h.s || 'NA'), loadZips(), loadHospitals(), loadOthers()]).then(([g, mm, sa, z, hh, o]) => {
       setG(g); setMM(mm); setZ(z); setH(hh); setO(o); const s = sa[ccn] || null; setS(s);
@@ -65,6 +65,9 @@ export default function ServiceArea({ ccn, h }) {
         <div className="hp-kpi"><b>{fmtInt(psaZ.size)}</b><span>ZIP codes in the primary service area</span><i>{psaCounties.length} {psaCounties.length === 1 ? 'county' : 'counties'}; {fmtInt(ssaZ.size)} more ZIP codes in the secondary area</i></div>
         <div className="hp-kpi"><b>{fmtPct(myShare)}</b><span>share of cases from its primary service area counties</span><i>{comp ? `Market HHI ${fmtInt(comp.hhi)}, ${hhiLabel(comp.hhi)}` : ''}</i></div>
         <div className="hp-kpi"><b>{fmtInt(S.sup[y])}</b><span>other ZIP codes with 1 to 10 cases each</span><i>Not counted in shares or service areas</i></div>
+        {V && (() => { const x = vbcExposure(V, Object.keys(cty), cty); return <>
+          <div className="hp-kpi"><b>{fmtPct(x.ma, 0)}</b><span>Medicare Advantage penetration where its patients live</span><i>Counties weighted by its cases; MA enrollment, {monthLabel(V.ma_snap)}</i></div>
+          <div className="hp-kpi"><b>{fmtPct(x.aco, 0)}</b><span>of Original Medicare patients there are in an MSSP ACO</span><i>Weighted the same way; MSSP {V.mssp_year}</i></div></>; })()}
       </div>
       <div className="cm-grid">
         <div>

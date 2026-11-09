@@ -4,6 +4,13 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.4', date: 'November 2026', items: [
+      'Market share over time: the leading hospitals or systems in any area from 2016 to 2025, with the share of care that stays local.',
+      'Where residents go: the hospitals and systems outside an area that take its residents, with each one\u2019s share of leavers and the change from the prior year.',
+      'Medicare Advantage and ACO exposure: MA penetration and MSSP ACO share for any area, and for each hospital weighted by where its patients live.',
+    ],
+  },
+  {
     version: 'Beta 1.3', date: 'November 2026', items: [
       'Health systems from the AHRQ Compendium (2023): a list of 478 multi-hospital systems, and a page for each with combined revenue and margins over time, member hospitals, service lines and a map of the system\u2019s market share by county.',
       'Market share by health system: the area market table can group hospitals by system, HHI is shown by system and by hospital, and each hospital profile names its system and the systems of its competitors.',
