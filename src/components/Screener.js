@@ -33,6 +33,9 @@ export default function Screener({ meta, query, onHospital }) {
   // Keep filters in the page address so a screen can be bookmarked or shared
   useEffect(() => { const p = new URLSearchParams(Object.entries(F).filter(([, v]) => v !== '' && v != null)); window.history.replaceState(null, '', `#screener?${p.toString()}`); }, [F]);
   const set = (k, v) => setF(o => ({ ...o, [k]: v }));
+  // A preset is highlighted while the current filters are exactly that preset (the year can differ)
+  const presetOn = p => { const cur = Object.entries(F).filter(([k, v]) => k !== 'y' && v !== '' && v != null);
+    return cur.length === Object.keys(p).length && cur.every(([k, v]) => String(p[k]) === String(v)); };
 
   const rows = useMemo(() => {
     if (!H || !Y) return [];
@@ -72,7 +75,7 @@ export default function Screener({ meta, query, onHospital }) {
       <div className="card" style={{ padding: '14px 16px', marginBottom: 14 }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
           <span className="cm-kicker" style={{ marginRight: 4 }}>Start from</span>
-          {PRESETS.map(([l, p]) => <button key={l} className="cm-chip" onClick={() => setF({ y: F.y, ...p })}>{l}</button>)}
+          {PRESETS.map(([l, p]) => <button key={l} className={`cm-chip ${presetOn(p) ? 'on' : ''}`} onClick={() => setF({ y: F.y, ...p })}>{l}</button>)}
           <button className="cm-chip" style={{ marginLeft: 'auto' }} onClick={() => setF({ t: 'STH,CAH' })}>Clear filters</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>

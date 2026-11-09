@@ -8,6 +8,7 @@ export const RELEASE_NOTES = [
       'Overview page: national trends in margins, hospitals losing money, cash and ownership from 2016 to 2024, and a sortable state table.',
       'Hospital screener: filter every hospital by type, region, state, ownership, location, teaching status and ranges of margin, cash, occupancy, payer mix, revenue, beds and 3-year margin change, with starting presets. Filters stay in the page address so a screen can be shared.',
       'Downloads: every table has a CSV; charts and maps offer PNG and the CSV behind them.',
+      'Compare Hospitals: up to five hospitals side by side on 18 measures with a peer median, trends over nine years, where they compete for Medicare patients, and their service lines. Start from any hospital profile.',
     ],
   },
   {
