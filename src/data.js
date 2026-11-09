@@ -118,7 +118,10 @@ export function rollup(rows) {
   const ok = rows.filter(r => !r.flag);
   const rev = sum(ok, 'rev'), npr = sum(ok, 'npr'), days = sum(rows, 'days'), bd = sum(rows, 'bed_days'), cost = sum(rows, 'cost');
   const tms = ok.map(r => r.tm).filter(v => v != null);
+  const qs = rows.map(r => r.q).filter(Boolean);
+  const st = qs.map(q => q.star).filter(v => v != null), hp = qs.filter(q => q.hacpen != null), tp = qs.map(q => q.tps).filter(v => v != null);
   return {
+    stars: st.length ? st.reduce((a, b) => a + b, 0) / st.length : null, hacpen: hp.length ? hp.filter(q => q.hacpen).length / hp.length : null, tps: median(tp),
     n: rows.length, clean: ok.length, beds: sum(rows, 'beds'), npr: sum(rows, 'npr'), dis: sum(rows, 'dis'), fte: sum(rows, 'fte'),
     tm: rev ? sum(ok, 'ni') / rev : null, pm: npr ? sum(ok, 'nisp') / npr : null,
     tm_med: median(tms), loss: tms.length ? tms.filter(v => v < 0).length / tms.length : null,
@@ -140,6 +143,9 @@ export const MEASURES = {
   occ:   { label: 'Occupancy', sub: 'Inpatient days as a share of available bed days', fmt: v => fmtPct(v) },
   mcr:   { label: 'Original Medicare share of inpatient days', sub: 'Original Medicare (Title XVIII) inpatient days as a share of all inpatient days; Medicare Advantage days are not counted here', fmt: v => fmtPct(v) },
   mcd:   { label: 'Medicaid share of inpatient days', sub: 'Medicaid (Title XIX) inpatient days as a share of all inpatient days; mostly fee-for-service Medicaid', fmt: v => fmtPct(v) },
+  stars: { label: 'Average CMS star rating', sub: 'Average overall star rating (1 to 5) of hospitals CMS rated, FY 2026', fmt: v => (v == null ? 'n/a' : v.toFixed(1) + ' stars') },
+  tps:   { label: 'Median value-based purchasing score', sub: 'Median Hospital VBP total performance score (0 to 100), FY 2026', fmt: v => (v == null ? 'n/a' : v.toFixed(1)) },
+  hacpen:{ label: 'Hospitals with a HAC penalty', sub: 'Share of hospitals in the hospital-acquired condition program that took the 1% payment cut, FY 2026', fmt: v => fmtPct(v, 0) },
   unc:   { label: 'Uncompensated care', sub: 'Unreimbursed and uncompensated care (charity care, bad debt and Medicaid shortfall) as a share of total costs', fmt: v => fmtPct(v) },
 };
 
@@ -181,3 +187,7 @@ export function vbcExposure(vbc, fipsList, weights) {
 }
 
 export const monthLabel = s => { const [y, m] = String(s).split('-'); return m ? `${MONTHS[+m - 1]} ${y}` : String(s); };
+export const loadQuality = () => load('quality', `${BASE}/quality.json`);
+export const READM_LABEL = { AMI: 'Heart attack', HF: 'Heart failure', PN: 'Pneumonia', COPD: 'COPD', CABG: 'Coronary bypass surgery', HIPKNEE: 'Hip and knee replacement' };
+/** Percentile (0 to 100) of a value within a list of 21 cut points at 0, 5, ..., 100 */
+export const pctRank = (v, cuts) => { if (v == null || !cuts) return null; let i = 0; while (i < cuts.length - 1 && v > cuts[i + 1]) i++; return Math.min(100, i * 5); };
