@@ -1,22 +1,26 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import HospitalMap from './components/HospitalMap';
+import Overview from './components/Overview';
+import Screener from './components/Screener';
 import HospitalProfile from './components/HospitalProfile';
 import Methodology from './components/Methodology';
 import { loadMeta } from './data';
 import { DATA_RELEASE } from './content';
 
 const NAV = [
+  { id: 'overview', label: 'Overview', section: 'Explore' },
   { id: 'map', label: 'Hospital Map', section: 'Explore' },
+  { id: 'screener', label: 'Hospital Screener', section: 'Explore' },
   { id: 'methodology', label: 'Methodology', section: 'Reference' },
 ];
-const PAGE_TITLES = { map: 'Hospital Map', h: 'Hospital Profile', methodology: 'Methodology' };
+const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', h: 'Hospital Profile', methodology: 'Methodology' };
 const APP = 'Hospital Financial Explorer';
 
-// Hash routes: #map, #map/OH, #map/39061, #map/area/39061,21015, #h/360180, #methodology
+// Hash routes: #overview, #map, #map/OH, #map/39061, #map/area/39061,21015, #h/360180, #screener?t=CAH&tm_max=0, #methodology
 function parseHash() {
-  const h = (window.location.hash || '').replace(/^#\/?/, '');
+  const [h, q] = (window.location.hash || '').replace(/^#\/?/, '').split('?');
   const [page, id, sub] = h.split('/');
-  return { page: PAGE_TITLES[page] ? page : 'map', id: id ? decodeURIComponent(id) : null, sub: sub ? decodeURIComponent(sub) : null };
+  return { page: PAGE_TITLES[page] ? page : 'overview', id: id ? decodeURIComponent(id) : null, sub: sub ? decodeURIComponent(sub) : null, q: q || '' };
 }
 
 function Brand() {
@@ -87,6 +91,8 @@ export default function App() {
         </div>
         <div className="page-content">
           {!meta ? <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div> : <>
+            {route.page === 'overview' && <Overview meta={meta} setPage={setPage} />}
+            {route.page === 'screener' && <Screener meta={meta} query={route.q} onHospital={onHospital} />}
             {route.page === 'map' && <HospitalMap key={route.id || 'us'} meta={meta} route={route} onHospital={onHospital} />}
             {route.page === 'h' && <HospitalProfile key={route.id} ccn={route.id} meta={meta} />}
             {route.page === 'methodology' && <Methodology meta={meta} />}
