@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
+import { loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
 
 const COLORS = ['#178a84', '#0b1829', '#d4860a', '#b4471f', '#6c5ce7'];
 const MAX = 5;
@@ -21,12 +21,16 @@ const ROWS = [
   ['sal_fte', 'Salary per FTE', d => d.m.sal_fte, fmtUsd, 0], ['cl_sh', 'Contract labor share', d => d.m.cl_sh, v => fmtPct(v), -1],
   ['unc', 'Uncompensated care, share of costs', d => d.m.unc, v => fmtPct(v), 0],
 ];
+const QROWS = [['CMS star rating', q => (q.star == null ? 'n/a' : q.star + ' of 5')], ['Patient experience stars', q => (q.pstar == null ? 'n/a' : q.pstar + ' of 5')],
+  ['Value-based purchasing score', q => (q.tps == null ? 'n/a' : q.tps)], ['Readmission conditions above expected', q => (q.err_hi == null ? 'n/a' : `${q.err_hi} of ${Object.keys(q.err).length}`)],
+  ['Hospital-acquired condition penalty', q => (q.hacpen == null ? 'n/a' : q.hacpen ? 'Yes' : 'No')]];
 const TREND = { tm: ['Total margin', v => +(v * 100).toFixed(1), '%'], pm: ['Patient service margin', v => +(v * 100).toFixed(1), '%'], dcoh: ['Days cash on hand', v => Math.round(v), ''], npr: ['Net patient revenue ($M)', v => +(v / 1e6).toFixed(1), 'M'], occ: ['Occupancy', v => +(v * 100).toFixed(1), '%'] };
 
 export default function Compare({ meta, ids }) {
   const [H, setH] = useState(null), [P, setP] = useState(null), [D, setD] = useState({}), [q, setQ] = useState('');
   const [list, setList] = useState(() => (ids || '').split(',').filter(x => /^[0-9A-Z]{6}$/.test(x)).slice(0, MAX));
-  const [year, setYear] = useState(meta.years[meta.years.length - 1]), [tk, setTk] = useState('tm');
+  const [year, setYear] = useState(meta.years[meta.years.length - 1]), [tk, setTk] = useState('tm'), [QD, setQD] = useState(null);
+  useEffect(() => { loadQuality().then(setQD); }, []);
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SA, setSA] = useState({}), [SL, setSL] = useState(null), [Z, setZ] = useState(null);
   useEffect(() => { Promise.all([loadHospitals(), loadPeers(), loadGeo(), loadMarketsMeta(), loadZips()]).then(([h, p, g, mm, z]) => { setH(h); setP(p); setG(g); setMM(mm); setZ(z);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, []);
@@ -84,7 +88,9 @@ export default function Compare({ meta, ids }) {
               const ok = vals.filter(v => v != null); const best = better && ok.length > 1 ? (better > 0 ? Math.max(...ok) : Math.min(...ok)) : null;
               return <tr key={k}><td className="lab">{l}</td>{hs.map((h, i) => { const d = rec(h.c); const flag = d && (d.q || []).some(x => x[0] !== '~');
                 return <td key={h.c} className="n" style={{ fontWeight: vals[i] != null && vals[i] === best ? 700 : undefined, color: flag ? 'var(--gray-500)' : undefined }}>{d ? fmt(vals[i]) : 'no report'}</td>; })}
-                <td className="n" style={{ color: 'var(--gray-600)' }}>{peer && peer[k] ? fmt(peer[k][1]) : ''}</td></tr>; })}</tbody></table></div>
+                <td className="n" style={{ color: 'var(--gray-600)' }}>{peer && peer[k] ? fmt(peer[k][1]) : ''}</td></tr>; })}
+              {QD && <><tr className="sub"><td colSpan={hs.length + 2}>Quality and penalties, FY {QD.meta.fy}</td></tr>
+                {QROWS.map(([l, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{QD.h[h.c] ? f(QD.h[h.c]) : 'not rated'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{l.startsWith('Value') ? `${QD.meta.tps_pct[10]} (national)` : ''}</td></tr>)}</>}</tbody></table></div>
         </ChartCard>
 
         <ChartCard title={`${TREND[tk][0]}, ${meta.years[0]} to ${meta.years[meta.years.length - 1]}`} style={{ marginTop: 14 }} filename={`compare-trend-${tk}`}

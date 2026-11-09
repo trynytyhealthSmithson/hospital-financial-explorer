@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.5', date: 'November 2026', items: [
+      'Quality and Medicare penalties (FY 2026): star rating, patient experience, value-based purchasing score and domains, excess readmissions by condition, and the hospital-acquired condition penalty on every hospital profile.',
+      'Quality on the map (average star rating, median VBP score, share penalized), in the screener (filters, a new preset and CSV columns) and in Compare Hospitals.',
+    ],
+  },
+  {
     version: 'Beta 1.4', date: 'November 2026', items: [
       'Market share over time: the leading hospitals or systems in any area from 2016 to 2025, with the share of care that stays local.',
       'Where residents go: the hospitals and systems outside an area that take its residents, with each one\u2019s share of leavers and the change from the prior year.',
