@@ -137,7 +137,7 @@ export default function HospitalProfile({ ccn, meta }) {
 
       <QualityCard ccn={ccn} />
       <PaymentCard ccn={ccn} />
-      <CostReportDetail ccn={ccn} st={h.s} />
+      <CostReportDetail ccn={ccn} st={h.s} fin={D.years} />
 
       <ServiceArea ccn={ccn} h={h} />
 

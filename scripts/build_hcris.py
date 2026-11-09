@@ -91,6 +91,15 @@ for y in YEARS:
     s3 = con.execute(f"SELECT k.ccn, n.line, n.col, sum(n.v) v FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt) WHERE n.ws='S300001' AND n.line IN ('00200','01400') GROUP BY 1,2,3").df()
     ea = con.execute(f"SELECT k.ccn, n.line, sum(n.v) v FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt) WHERE n.ws='E00A18A' AND n.col IN ('00100','00101','00102') AND n.line IN ({','.join(repr(l) for l in EA)}) GROUP BY 1,2").df()
     gme = con.execute(f"SELECT k.ccn, sum(n.v) v FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt) WHERE n.ws='E40A180' AND n.line='04800' AND n.col='00100' GROUP BY 1").df()
+    # Medicare fee-for-service inpatient: cost (D-1 Part II line 49) and PPS payments (E Part A line 47 operating, line 50 capital)
+    mm = con.execute(f"""SELECT k.ccn, sum(CASE WHEN n.ws='D10A181' AND n.line='04900' AND n.col='00100' THEN n.v END) cost,
+                         sum(CASE WHEN n.ws='E00A18A' AND n.line='04700' AND n.col IN ('00100','00101','00102') THEN n.v END) op,
+                         sum(CASE WHEN n.ws='E00A18A' AND n.line='05000' AND n.col IN ('00100','00101','00102') THEN n.v END) cap
+                         FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt) WHERE n.ws IN ('D10A181','E00A18A') GROUP BY 1""").df().set_index('ccn')
+    # Balance sheet detail (Worksheet G, general fund): accumulated depreciation, depreciable assets, debt, fund balance
+    gl = con.execute(f"""SELECT k.ccn, n.line, sum(n.v) v FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt)
+                         WHERE n.ws='G000000' AND n.col='00100' AND n.line IN ('01300','01400','01500','01600','01700','01800','01900','02000','02100','02200','02300','02400','02500','02600','02700','02800','04600','04700','04800','05000','05900')
+                         GROUP BY 1,2""").df()
     c = con.execute(f"""SELECT k.ccn, n.line, sum(CASE WHEN n.col='00100' THEN n.v END) cost, sum(CASE WHEN n.col='00600' THEN n.v END) ipc,
                          sum(CASE WHEN n.col='00700' THEN n.v END) opc FROM '{PQ}/nmrc_{y}.parquet' n JOIN k USING(rpt)
                          WHERE n.ws='C000001' AND n.line < '20000' GROUP BY 1,2""").df()
@@ -115,6 +124,8 @@ for y in YEARS:
     hoinfo = defaultdict(dict)
     for r in ho.itertuples(): hoinfo[r.ccn][(r.line, r.col)] = (r.v or '').strip()
 
+    G = defaultdict(dict)
+    for r in gl.itertuples(): G[r.ccn][r.line] = r.v
     yi = {}
     for ccn in rpt.ccn.unique():
         p = rec.get(ccn, {})
@@ -131,6 +142,15 @@ for y in YEARS:
                 for i in range(3): fam[row[2]][i] += row[3 + i] or 0
             o['f'] = sorted([[k] + v for k, v in fam.items()], key=lambda r: -(r[1] or 0))
             if y == YEARS[-1]: o['dl'] = sorted(dept[ccn], key=lambda r: -(r[3] or 0))
+        if ccn in mm.index and add.get(ccn, {}).get('drg'):
+            r = mm.loc[ccn]
+            if pd.notna(r.cost) and r.cost > 0 and pd.notna(r.op) and r.op > 0:
+                o['mm'] = [round(r.op), round(r.cap) if pd.notna(r.cap) else 0, round(r.cost)]
+        g = G.get(ccn)
+        if g:
+            acc = -sum(g.get(l, 0) for l in ('01400', '01600', '01800', '02000', '02200', '02400', '02600', '02800'))
+            gross = sum(g.get(l, 0) for l in ('01300', '01500', '01700', '01900', '02100', '02300', '02500', '02700'))
+            o['bs'] = [round(acc), round(gross)] + [round(g[l]) if l in g else None for l in ('04600', '04700', '04800', '05000', '05900')]
         L = last.loc[ccn]
         o['st'] = STATUS.get(str(L.st), str(L.st)); o['proc'] = L.proc; o['n_rep'] = int((rpt.ccn == ccn).sum())
         hi = hoinfo.get(ccn, {})
@@ -146,7 +166,8 @@ for y in YEARS:
             sh = lambda v: None if v is None else round(v / tot, 4)
             mall = (days[0] or 0) + (days[1] or 0); dall = (days[2] or 0) + (days[3] or 0)
             yi[ccn] = [sh(mall), sh(days[1] or 0), sh(dall), sh(days[3] or 0), round((days[1] or 0) / mall, 4) if mall else None,
-                       round(sum(a.get(k, 0) for k in ('out', 'ime', 'ime_ma', 'dsh', 'ucp', 'dgme'))) or None]
+                       round(sum(a.get(k, 0) for k in ('out', 'ime', 'ime_ma', 'dsh', 'ucp', 'dgme'))) or None,
+                       round((o['mm'][0] + o['mm'][1] - o['mm'][2]) / (o['mm'][0] + o['mm'][1]), 4) if 'mm' in o else None]
     idx['years'][y] = yi
     print(y, 'reports', len(rpt), 'hospitals', rpt.ccn.nunique(), 'with payer mix', len(yi), flush=True)
 
@@ -162,7 +183,15 @@ for y in YEARS:
             p = o.get(y, {}).get('pd')
             if p and p[1]: m += p[0] or 0; a += p[1]
     ma_pen[y] = round(a / (a + m), 4) if a + m else None
-idx['meta'] = {'ma_pen': ma_pen, 'years': YEARS, 'source': 'CMS HCRIS hospital cost report files (form 2552-10), October 2026 refresh',
+mm_agg = {}
+for y in YEARS:
+    p = c_ = 0
+    for v in per_state.values():
+        for o in v.values():
+            m = o.get(y, {}).get('mm')
+            if m and abs((m[0] + m[1] - m[2]) / (m[0] + m[1])) <= 1: p += m[0] + m[1]; c_ += m[2]
+    mm_agg[y] = round((p - c_) / p, 4) if p else None
+idx['meta'] = {'ma_pen': ma_pen, 'mm_margin': mm_agg, 'years': YEARS, 'source': 'CMS HCRIS hospital cost report files (form 2552-10), October 2026 refresh',
                'status': STATUS, 'n_home_offices': len(idx['hos'])}
 json.dump(idx, open(ROOT / 'public/data/hcris_idx.json', 'w'), separators=(',', ':'), allow_nan=False)
 print('idx KB', (ROOT / 'public/data/hcris_idx.json').stat().st_size // 1024, 'states', len(per_state),

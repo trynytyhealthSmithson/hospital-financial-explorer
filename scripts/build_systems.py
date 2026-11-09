@@ -5,7 +5,7 @@ named with the AHRQ health system name most of the parent's hospitals carry. Onl
 hospitals count as systems. Writes:
   systems.json   {id: {n: name, ci, s (HQ city, state), h: [ccn...], st: [states], y: {year: rollup}}}
   hospitals.json  adds 'sy' (system id) to each hospital, in place
-Run after build_hospitals.py and before build_markets.py / build_overview.py.
+Run after build_hospitals.py and build_hcris.py, and before build_markets.py / build_overview.py.
 """
 import json, re
 from collections import Counter, defaultdict
@@ -39,6 +39,26 @@ for pid, g in d.dropna(subset=['corp_parent_id']).groupby('corp_parent_id'):
 for h in H: h.pop('sy', None)
 for sid, s in sysd.items():
     for c in s['h']: H[idx[c]]['sy'] = sid
+
+# Hospitals missing from the 2023 linkage (most opened or changed hands since) join a system when the home office on
+# their own cost report (HCRIS Worksheet S-2, from build_hcris.py) belongs to that system: at least 80% of the
+# hospitals filing under that home office that are in the linkage, and at least two of them, are in the one system.
+HX = OUT / 'hcris_idx.json'
+added = 0
+if HX.exists():
+    ho = json.load(open(HX))['ho']
+    by_ho = defaultdict(Counter)
+    for c, o in ho.items():
+        if c in idx and H[idx[c]].get('sy'): by_ho[o][H[idx[c]]['sy']] += 1
+    for c, o in sorted(ho.items()):
+        if c not in idx or H[idx[c]].get('sy') or not by_ho.get(o): continue
+        sid, n = by_ho[o].most_common(1)[0]
+        if n >= 2 and n / sum(by_ho[o].values()) >= 0.8:
+            sysd[sid]['h'] = sorted(sysd[sid]['h'] + [c]); sysd[sid].setdefault('hx', []).append(c)
+            st = H[idx[c]]['s']
+            if st and st not in sysd[sid]['st']: sysd[sid]['st'] = sorted(sysd[sid]['st'] + [st])
+            H[idx[c]]['sy'] = sid; added += 1
+print('added from cost report home offices', added)
 
 # Yearly rollups (same rules as the app: usable reports only for margins and medians)
 def rollup(rows):

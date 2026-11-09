@@ -57,6 +57,7 @@ export function SystemPage({ id, meta }) {
   const trend = years.map(y => { const r = sys.y[String(y)]; return { y, tm: r.tm == null ? null : +(r.tm * 100).toFixed(1), med: r.tm_med == null ? null : +(r.tm_med * 100).toFixed(1), npr: +(r.npr / 1e9).toFixed(2) }; });
   const hosp = sys.h.map(c => ({ h: byC[c], r: Y.byIdx.get(byC[c].i) })).sort((a, b) => ((b.r && b.r.npr) || 0) - ((a.r && a.r.npr) || 0));
   const fmap = Object.fromEntries(cty.map(r => [r.f, r]));
+  const hx = new Set(sys.hx || []);
   const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
 
   return (
@@ -97,11 +98,11 @@ export function SystemPage({ id, meta }) {
         </div>
       </ChartCard>
       <ChartCard title={`Member hospitals, ${Ly}`} style={{ marginTop: 14 }} csvName={`system-${id}-hospitals-${Ly}`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh])]}>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
         <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th></tr></thead>
-          <tbody>{hosp.map(({ h, r }) => <tr key={h.c} style={r && r.flag ? { color: 'var(--gray-500)' } : undefined}><td><a href={`#h/${h.c}`}>{titleCase(h.n)}</a><span className="cm-sttag">{titleCase(h.ci || '')}, {h.s}</span></td><td>{meta.ftype[h.t]}</td>
+          <tbody>{hosp.map(({ h, r }) => <tr key={h.c} style={r && r.flag ? { color: 'var(--gray-500)' } : undefined}><td><a href={`#h/${h.c}`}>{titleCase(h.n)}</a>{hx.has(h.c) && <sup title="Not in the 2023 AHRQ linkage; added because its own cost report names this system's home office" style={{ color: 'var(--teal-dark)', marginLeft: 2 }}>†</sup>}<span className="cm-sttag">{titleCase(h.ci || '')}, {h.s}</span></td><td>{meta.ftype[h.t]}</td>
             {r ? <><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td><td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td></> : <td colSpan={5} style={{ color: 'var(--gray-500)' }}>No {Ly} report</td>}</tr>)}</tbody></table></div>
-        <p className="cm-note">{NOTE} Combined figures add up member hospitals&apos; own cost reports, so they leave out the system&apos;s physician groups, insurance plans, investments and other businesses, and will not match a system&apos;s consolidated financial statements.</p>
+        <p className="cm-note">{hx.size > 0 && <>† {hx.size} {hx.size === 1 ? 'hospital is' : 'hospitals are'} not in the 2023 AHRQ linkage and {hx.size === 1 ? 'was' : 'were'} added because {hx.size === 1 ? 'its' : 'their'} own cost report names this system&apos;s home office. </>}{NOTE} Combined figures add up member hospitals&apos; own cost reports, so they leave out the system&apos;s physician groups, insurance plans, investments and other businesses, and will not match a system&apos;s consolidated financial statements.</p>
       </ChartCard>
     </div>
   );

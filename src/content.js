@@ -4,6 +4,13 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 1.8', date: 'November 2026', items: [
+      'Medicare fee-for-service inpatient margin: what Medicare paid for inpatient care against what that care cost, from each hospital\u2019s own Medicare settlement, with the all-hospital figure for comparison. Also in the screener and Compare Hospitals.',
+      'Capital and debt: depreciable assets, accumulated depreciation, average age of plant, long-term debt, fund balance and debt to capitalization by year.',
+      'About 200 hospitals missing from the 2023 AHRQ system list now join their system, matched through the home office on their own cost report, and are marked on system pages.',
+    ],
+  },
+  {
     version: 'Beta 1.7', date: 'November 2026', items: [
       'Payer mix including Medicare Advantage and Medicaid managed care, from the full cost report files (2022 to 2024). The summary file counts only Original Medicare days.',
       'Medicare add-on payments by year: teaching (IME) for fee-for-service and Medicare Advantage patients, DSH, uncompensated care, direct GME and outliers.',
