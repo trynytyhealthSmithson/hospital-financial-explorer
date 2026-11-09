@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase, countyTitle } from './HospitalMap';
-import { fmtAdj, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
+import { fmtAdj, loadOpIdx, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
 
 const COLORS = ['#178a84', '#0b1829', '#d4860a', '#b4471f', '#6c5ce7'];
 const MAX = 5;
@@ -30,8 +30,8 @@ export default function Compare({ meta, ids }) {
   const [H, setH] = useState(null), [P, setP] = useState(null), [D, setD] = useState({}), [q, setQ] = useState('');
   const [list, setList] = useState(() => (ids || '').split(',').filter(x => /^[0-9A-Z]{6}$/.test(x)).slice(0, MAX));
   const [year, setYear] = useState(meta.years[meta.years.length - 1]), [tk, setTk] = useState('tm'), [QD, setQD] = useState(null);
-  const [IPD, setIPD] = useState(null), [HX, setHX] = useState(null);
-  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); loadHcrisIdx().then(setHX); }, []);
+  const [IPD, setIPD] = useState(null), [HX, setHX] = useState(null), [OP, setOP] = useState(null);
+  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); }, []);
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SA, setSA] = useState({}), [SL, setSL] = useState(null), [Z, setZ] = useState(null);
   useEffect(() => { Promise.all([loadHospitals(), loadPeers(), loadGeo(), loadMarketsMeta(), loadZips()]).then(([h, p, g, mm, z]) => { setH(h); setP(p); setG(g); setMM(mm); setZ(z);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, []);
@@ -68,6 +68,8 @@ export default function Compare({ meta, ids }) {
   const hx = HX && HX.years[year];
   const HROWS = [['Medicare share of days, including Medicare Advantage', 0, v => fmtPct(v, 0)], ['Medicare Advantage share of Medicare days', 4, v => fmtPct(v, 0)],
     ['Medicaid share of days, including managed care', 2, v => fmtPct(v, 0)], ['Medicare add-on payments (IME, DSH, uncompensated care, GME, outliers)', 5, v => fmtUsdM(v)], ['Medicare fee-for-service inpatient margin', 6, v => fmtPct(v)]];
+  const opLines = OP ? OP.lines.map(([k, l]) => ({ k, l, v: hs.map(h => (OP.h[h.c] && OP.h[h.c][k] ? OP.h[h.c][k] : null)) })).filter(r => r.v.some(Boolean)) : [];
+  const opTot = OP ? hs.map(h => { const o = OP.h[h.c]; if (!o) return null; return Object.values(o).reduce((a, r) => [a[0] + r[0], a[1] + r[1], a[2] + (r[2] || 0)], [0, 0, 0]); }) : [];
   return (
     <div>
       <div className="card" style={{ padding: '14px 16px', marginBottom: 14 }}>
@@ -126,6 +128,13 @@ export default function Compare({ meta, ids }) {
               <tbody>{lines.map(r => { const mx = Math.max(...r.v); return <tr key={r.k}><td>{MM.sl[r.k]}</td>{r.v.map((v, i) => <td key={i} className="n" style={{ fontWeight: v === mx && v > 0 ? 700 : undefined }}>{v ? fmtInt(v) : ''}</td>)}</tr>; })}</tbody></table></div>
           </ChartCard>
         </div>
+        {OP && opLines.length > 0 && <ChartCard title={`Outpatient procedures, ${OP.meta.latest}`} style={{ marginTop: 14 }}
+          sub="Original Medicare outpatient procedures and observation stays (comprehensive APCs), with the change since 2019. Hospitals not paid under the outpatient PPS, such as critical access hospitals, are not in the file."
+          csvName={`compare-outpatient-${OP.meta.latest}`} csv={() => [['service_line', ...hs.flatMap(h => [`${nm(h)} services`, `${nm(h)} change since 2019`])], ...opLines.map(r => [r.l, ...r.v.flatMap(x => (x ? [x[0], x[2] ? x[0] / x[2] - 1 : ''] : ['', '']))])]}>
+          <div style={{ overflow: 'auto', maxHeight: 460 }}><table className="cm-table"><thead><tr><th>Service line</th>{hs.map((h, i) => <th key={h.c} className="n" style={{ color: COLORS[i] }}>{nm(h).split(' ').slice(0, 3).join(' ')}</th>)}</tr></thead>
+            <tbody><tr style={{ fontWeight: 600 }}><td>All procedures</td>{opTot.map((t, i) => <td key={i} className="n">{t ? `${fmtInt(t[0])}${t[2] ? ` (${t[0] >= t[2] ? '+' : '−'}${Math.abs(Math.round((t[0] / t[2] - 1) * 100))}%)` : ''}` : 'not in file'}</td>)}</tr>
+              {opLines.map(r => { const mx = Math.max(...r.v.map(x => (x ? x[0] : 0))); return <tr key={r.k}><td>{r.l}</td>{r.v.map((x, i) => <td key={i} className="n" style={{ fontWeight: x && x[0] === mx ? 700 : undefined }}>{x ? `${fmtInt(x[0])}${x[2] ? ` (${x[0] >= x[2] ? '+' : '−'}${Math.abs(Math.round((x[0] / x[2] - 1) * 100))}%)` : ''}` : ''}</td>)}</tr>; })}</tbody></table></div>
+        </ChartCard>}
       </>}
     </div>
   );

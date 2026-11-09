@@ -6,6 +6,7 @@ import ServiceArea from './ServiceArea';
 import QualityCard from './Quality';
 import PaymentCard from './Payment';
 import CostReportDetail from './CostReportDetail';
+import OutpatientCard from './Outpatient';
 import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -138,6 +139,7 @@ export default function HospitalProfile({ ccn, meta }) {
       <QualityCard ccn={ccn} />
       <PaymentCard ccn={ccn} />
       <CostReportDetail ccn={ccn} st={h.s} fin={D.years} />
+      <OutpatientCard ccn={ccn} st={h.s} />
 
       <ServiceArea ccn={ccn} h={h} />
 
