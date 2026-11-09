@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase, countyTitle } from './HospitalMap';
-import { fmtAdj, loadOpIdx, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
+import { fmtAdj, load340b, loadOpIdx, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
 
 const COLORS = ['#178a84', '#0b1829', '#d4860a', '#b4471f', '#6c5ce7'];
 const MAX = 5;
@@ -30,8 +30,8 @@ export default function Compare({ meta, ids }) {
   const [H, setH] = useState(null), [P, setP] = useState(null), [D, setD] = useState({}), [q, setQ] = useState('');
   const [list, setList] = useState(() => (ids || '').split(',').filter(x => /^[0-9A-Z]{6}$/.test(x)).slice(0, MAX));
   const [year, setYear] = useState(meta.years[meta.years.length - 1]), [tk, setTk] = useState('tm'), [QD, setQD] = useState(null);
-  const [IPD, setIPD] = useState(null), [HX, setHX] = useState(null), [OP, setOP] = useState(null);
-  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); }, []);
+  const [IPD, setIPD] = useState(null), [HX, setHX] = useState(null), [OP, setOP] = useState(null), [B3, setB3] = useState(null);
+  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); load340b().then(setB3); }, []);
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SA, setSA] = useState({}), [SL, setSL] = useState(null), [Z, setZ] = useState(null);
   useEffect(() => { Promise.all([loadHospitals(), loadPeers(), loadGeo(), loadMarketsMeta(), loadZips()]).then(([h, p, g, mm, z]) => { setH(h); setP(p); setG(g); setMM(mm); setZ(z);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, []);
@@ -103,7 +103,10 @@ export default function Compare({ meta, ids }) {
                   ['Value-based purchasing adjustment', p => fmtAdj(p.vbp_f), ''], ['Readmissions penalty', p => fmtAdj(p.hrrp_f), '']].map(([l, f, m]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{IPD.h[h.c] ? f(IPD.h[h.c]) : 'not in PPS'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{m}</td></tr>)}</>}
               {hx && <><tr className="sub"><td colSpan={hs.length + 2}>Payer mix and Medicare add-ons, full cost report {year}</td></tr>
                 {HROWS.map(([l, i, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => { const r = hx[h.c]; const v = r ? r[i] : null; return <td key={h.c} className="n">{r ? (i === 4 && !r[1] ? 'not reported' : v == null || (i === 5 && !v) ? (i === 5 ? 'none' : i === 6 ? 'not in PPS' : 'n/a') : f(v)) : 'no report'}</td>; })}
-                  <td className="n" style={{ color: 'var(--gray-600)' }}>{i === 4 && HX.meta.ma_pen[year] ? `${fmtPct(HX.meta.ma_pen[year], 0)} (national)` : i === 6 && HX.meta.mm_margin[year] != null ? `${fmtPct(HX.meta.mm_margin[year])} (all PPS hospitals)` : ''}</td></tr>)}</>}</tbody></table></div>
+                  <td className="n" style={{ color: 'var(--gray-600)' }}>{i === 4 && HX.meta.ma_pen[year] ? `${fmtPct(HX.meta.ma_pen[year], 0)} (national)` : i === 6 && HX.meta.mm_margin[year] != null ? `${fmtPct(HX.meta.mm_margin[year])} (all PPS hospitals)` : ''}</td></tr>)}</>}
+              {B3 && <><tr className="sub"><td colSpan={hs.length + 2}>340B Drug Pricing Program, {B3.meta.as_of}</td></tr>
+                {[['340B status', r => (r[2] ? `${B3.meta.types[r[0]]} since ${r[1].slice(0, 4)}` : 'Not participating')], ['340B child sites', r => (r[2] ? fmtInt(r[3]) : '')], ['340B contract pharmacies', r => (r[2] ? fmtInt(r[4]) : '')]].map(([l, f]) =>
+                  <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{B3.h[h.c] ? f(B3.h[h.c]) : (l === '340B status' ? 'Never registered' : '')}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{l.includes('pharmacies') ? `${B3.meta.cp_median} (median participant)` : ''}</td></tr>)}</>}</tbody></table></div>
         </ChartCard>
 
         <ChartCard title={`${TREND[tk][0]}, ${meta.years[0]} to ${meta.years[meta.years.length - 1]}`} style={{ marginTop: 14 }} filename={`compare-trend-${tk}`}

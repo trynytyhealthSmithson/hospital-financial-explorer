@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER } from '../data';
+import { load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER } from '../data';
 
 const REGION = {
   Northeast: ['CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA'],
@@ -23,6 +23,7 @@ const PRESETS = [
   ['Margins down 5 points or more in 3 years', { t: 'STH,CAH', dtm_max: '-5' }],
   ['Penalized for hospital-acquired conditions and losing money', { t: 'STH', hacp: '1', tm_max: '0' }],
   ['Acute care hospitals where most Medicare days are Medicare Advantage', { t: 'STH', mapen_min: '60' }],
+  ['340B hospitals losing money', { t: 'STH,CAH', b340: '1', tm_max: '0' }],
   ['Large hospitals (300+ beds) with negative patient margins and positive total margins', { t: 'STH', beds_min: '300', pm_max: '0', tm_min: '0' }],
 ];
 const COLS = [['n', 'Hospital'], ['beds', 'Beds'], ['npr', 'Net patient revenue'], ['tm', 'Total margin'], ['dtm', '3-year change'], ['pm', 'Patient margin'], ['dcoh', 'Days cash'], ['occ', 'Occupancy'], ['mall', 'Medicare days (incl. MA)'], ['mapen', 'MA share of Medicare'], ['cmi', 'CMI'], ['star', 'Stars']];
@@ -32,8 +33,8 @@ export default function Screener({ meta, query, onHospital }) {
   const [F, setF] = useState(() => { const p = new URLSearchParams(query || ''); const o = Object.fromEntries(p.entries()); if (!o.t) o.t = 'STH,CAH'; return o; });
   const [H, setH] = useState(null), [Y, setY] = useState(null), [Y3, setY3] = useState(null), [sort, setSort] = useState('npr');
   const year = +(F.y || last);
-  const [QD, setQD] = useState(null), [IP, setIP] = useState(null), [HX, setHX] = useState(null);
-  useEffect(() => { loadHospitals().then(setH); loadQuality().then(setQD); loadIpps().then(setIP); loadHcrisIdx().then(setHX); }, []);
+  const [QD, setQD] = useState(null), [IP, setIP] = useState(null), [HX, setHX] = useState(null), [B3, setB3] = useState(null);
+  useEffect(() => { loadHospitals().then(setH); loadQuality().then(setQD); loadIpps().then(setIP); loadHcrisIdx().then(setHX); load340b().then(setB3); }, []);
   useEffect(() => { setY(null); loadYear(year).then(setY); if (meta.years.includes(year - 3)) loadYear(year - 3).then(setY3); else setY3(null); }, [year, meta.years]);
   // Keep filters in the page address so a screen can be bookmarked or shared
   useEffect(() => { const p = new URLSearchParams(Object.entries(F).filter(([, v]) => v !== '' && v != null)); window.history.replaceState(null, '', `#screener?${p.toString()}`); }, [F]);
@@ -58,9 +59,11 @@ export default function Screener({ meta, query, onHospital }) {
       if (!F.flag && r.flag) return;
       const qq = QD ? QD.h[h.c] || {} : {}; const ip = IP ? IP.h[h.c] || {} : {}; const hx = (HX && HX.years[year] && HX.years[year][h.c]) || null;
       if (F.hacp && qq.hacpen !== 1) return;
+      const b3 = B3 ? B3.h[h.c] : null; const in340 = !!(b3 && b3[2]);
+      if (F.b340 === '1' && !in340) return; if (F.b340 === '0' && in340) return;
       const p = Y3 && Y3.byIdx.get(i);
       const x = { ...r, h, mcr: r.days ? r.mcr_days / r.days : null, mcd: r.days ? r.mcd_days / r.days : null,
-        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
+        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, in340, cp340: in340 ? b3[4] : null, cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
       for (const [k] of RANGES) {
         const lo = F[k + '_min'], hi = F[k + '_max']; if ((lo == null || lo === '') && (hi == null || hi === '')) continue;
         let v = x[k]; if (v == null) return;
@@ -71,10 +74,10 @@ export default function Screener({ meta, query, onHospital }) {
       out.push(x);
     });
     return out.sort((a, b) => (sort === 'n' ? a.h.n.localeCompare(b.h.n) : (b[sort] ?? -1e15) - (a[sort] ?? -1e15)));
-  }, [H, Y, Y3, F, sort, QD, IP, HX, year]);
+  }, [H, Y, Y3, F, sort, QD, IP, HX, B3, year]);
 
   const tms = rows.filter(r => !r.flag).map(r => r.tm);
-  const active = RANGES.filter(([k]) => F[k + '_min'] || F[k + '_max']).length + ['r', 's', 'g', 'ru', 'te', 'hacp'].filter(k => F[k]).length;
+  const active = RANGES.filter(([k]) => F[k + '_min'] || F[k + '_max']).length + ['r', 's', 'g', 'ru', 'te', 'hacp', 'b340'].filter(k => F[k]).length;
   const inp = { width: 64, font: '12px var(--font)', padding: '4px 6px', border: '1px solid var(--slate-light)', borderRadius: 5 };
 
   return (
@@ -103,14 +106,15 @@ export default function Screener({ meta, query, onHospital }) {
             <input style={inp} placeholder="max" value={F[k + '_max'] || ''} onChange={e => set(k + '_max', e.target.value)} inputMode="decimal" />
           </div>)}
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.hacp} onChange={e => set('hacp', e.target.checked ? '1' : '')} /> Took the hospital-acquired condition penalty (FY 2026)</label>
+          <label className="cm-field" style={{ margin: 0 }}>340B<select value={F.b340 || ''} onChange={e => set('b340', e.target.value)}><option value="">Any</option><option value="1">Participating</option><option value="0">Not participating</option></select></label>
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.flag} onChange={e => set('flag', e.target.checked ? '1' : '')} /> Include reports flagged as unusable</label>
         </div>
       </div>
 
       <ChartCard title={!H || !Y ? 'Loading…' : `${fmtInt(rows.length)} hospitals match`} csvName={`hospital-screen-${year}`}
         sub={!H || !Y ? '' : `${year} cost reports${active ? `, ${active} ${active === 1 ? 'filter' : 'filters'}` : ''}. Median total margin of these hospitals: ${fmtPct(median(tms))}. The 3-year change compares with ${year - 3}. The page address keeps your filters, so you can bookmark or share this screen.`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'flagged'],
-          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.flag ? 'yes' : 'no'])]}>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'in_340b', 'contract_pharmacies_340b', 'flagged'],
+          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.in340 ? 'yes' : 'no', r.cp340 ?? '', r.flag ? 'yes' : 'no'])]}>
         <div style={{ overflow: 'auto', maxHeight: 620 }}>
           <table className="cm-table"><thead><tr>
             {COLS.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}<th>Type</th></tr></thead>
