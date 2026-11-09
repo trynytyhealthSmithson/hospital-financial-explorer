@@ -12,7 +12,7 @@ const REGION = {
 const STATES = Object.values(REGION).flat().sort();
 // Numeric filters: [key, label, unit]. Percent filters are entered as percents.
 const RANGES = [['tm', 'Total margin', '%'], ['pm', 'Patient service margin', '%'], ['dcoh', 'Days cash on hand', 'days'], ['occ', 'Occupancy', '%'],
-  ['mcr', 'Original Medicare share of days', '%'], ['mall', 'Medicare share of days, including Medicare Advantage (2022+)', '%'], ['mapen', 'Medicare Advantage share of Medicare days (2022+)', '%'], ['mmm', 'Medicare fee-for-service inpatient margin (2022+)', '%'], ['mcd', 'Medicaid share of days', '%'], ['npr', 'Net patient revenue', '$M'], ['beds', 'Beds', ''], ['dtm', 'Change in total margin over 3 years', 'pts'],
+  ['mcr', 'Original Medicare share of days', '%'], ['mall', 'Medicare share of days, including Medicare Advantage', '%'], ['mapen', 'Medicare Advantage share of Medicare days', '%'], ['mmm', 'Medicare fee-for-service inpatient margin', '%'], ['mcd', 'Medicaid share of days', '%'], ['npr', 'Net patient revenue', '$M'], ['beds', 'Beds', ''], ['dtm', 'Change in total margin over 3 years', 'pts'],
   ['cmi', 'Case mix index', ''], ['hrrp', 'Readmissions penalty, FY 2027', '%'],
   ['star', 'CMS star rating', '1 to 5'], ['tps', 'Value-based purchasing score', '0 to 100'], ['err_hi', 'Readmission conditions above expected', 'count']];
 const PCT = new Set(['tm', 'pm', 'occ', 'mcr', 'mall', 'mapen', 'mmm', 'mcd', 'dtm', 'hrrp']);

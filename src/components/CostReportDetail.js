@@ -71,7 +71,7 @@ export default function CostReportDetail({ ccn, st, fin }) {
             <div className="hp-kpi"><b>{fmtPct(mcd, 0)}</b><span>of inpatient days are Medicaid</span><i>{lm.v[2] + lm.v[3] ? `${fmtPct(lm.v[3] / (lm.v[2] + lm.v[3]), 0)} of them in managed care` : ''}</i></div>
             <div className="hp-kpi"><b>{fmtInt(lm.t)}</b><span>total inpatient days</span></div>
           </div>
-          <div style={{ height: 70 + 34 * mix.length }}><ResponsiveContainer><BarChart data={mix} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+          <div style={{ height: 70 + 28 * mix.length }}><ResponsiveContainer><BarChart data={mix} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#eef1f5" horizontal={false} /><XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow unit="%" tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="y" width={44} tick={{ fontSize: 11 }} />
             <Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
             {PAYERS.map(([k, c]) => <Bar key={k} dataKey={k} stackId="a" fill={c} />)}
@@ -89,21 +89,21 @@ export default function CostReportDetail({ ccn, st, fin }) {
           <div className="hp-kpi"><b>{fmtUsdM(D[mmY].mm[0] + D[mmY].mm[1])}</b><span>Medicare inpatient payments (operating and capital)</span></div>
           <div className="hp-kpi"><b>{fmtUsdM(D[mmY].mm[2])}</b><span>cost of Medicare inpatient care</span></div>
         </div>}
-        <table className="cm-table"><thead><tr><th></th>{addYears.map(y => <th key={y} className="n">{y}</th>)}</tr></thead><tbody>
+        <div style={{ overflowX: 'auto' }}><table className="cm-table"><thead><tr><th></th>{addYears.map(y => <th key={y} className="n">{y}</th>)}</tr></thead><tbody>
           {mmL != null && <>{MMROWS.map(([l, f, fmt]) => <tr key={l}><td className="lab">{l}</td>{addYears.map(y => <td key={y} className="n">{D[y].mm ? fmt(f(D[y].mm)) : 'n/a'}</td>)}</tr>)}
             <tr className="sub"><td colSpan={addYears.length + 1}>Add-on payments</td></tr></>}
           {ADDONS.map(([k, l]) => <tr key={k}><td className="lab">{l}</td>{addYears.map(y => <td key={y} className="n">{D[y].a[k] ? fmtUsdM(D[y].a[k]) : ''}</td>)}</tr>)}
           <tr style={{ fontWeight: 600 }}><td className="lab">Total add-ons (excluding base DRG)</td>{addYears.map(y => <td key={y} className="n">{fmtUsdM(addTot(y))}</td>)}</tr>
           <tr><td className="lab">Fee-for-service add-ons (outliers, IME, DSH, uncompensated care) as a share of base DRG</td>{addYears.map(y => <td key={y} className="n">{D[y].a.drg ? fmtPct(ffsTot(y) / D[y].a.drg, 0) : 'n/a'}</td>)}</tr>
-        </tbody></table>
+        </tbody></table></div>
         <p className="cm-note">The margin compares inpatient PPS payments (operating, with IME, DSH, uncompensated care and outliers, plus capital) with Medicare&apos;s share of inpatient cost from Worksheet D-1. It leaves out outpatient care, graduate medical education, organ acquisition and Medicare Advantage teaching payments, so it is not the same as MedPAC&apos;s overall Medicare margin. Blank means none reported. When a fiscal year spans October 1, the amounts before and after the rate change are added together. Uncompensated care payments are interim amounts; CMS reconciles them later.</p>
       </ChartCard>}
 
       {bsYears.length > 0 && <ChartCard title="Capital and debt" style={{ marginTop: 14 }}
         sub="From the hospital's balance sheet (Worksheet G). Average age of plant is accumulated depreciation divided by the year's depreciation expense; a higher number means older buildings and equipment and, often, capital needs ahead."
         csvName={`hospital-${ccn}-capital-debt`} csv={() => [['measure', ...bsYears], ...BSROWS.map(([l, f]) => [l, ...bsYears.map(y => f(D[y].bs, fin && fin[y]) ?? '')])]}>
-        <table className="cm-table"><thead><tr><th></th>{bsYears.map(y => <th key={y} className="n">{y}</th>)}</tr></thead>
-          <tbody>{BSROWS.map(([l, f, fmt]) => <tr key={l}><td className="lab">{l}</td>{bsYears.map(y => <td key={y} className="n">{fmt(f(D[y].bs, fin && fin[y]))}</td>)}</tr>)}</tbody></table>
+        <div style={{ overflowX: 'auto' }}><table className="cm-table"><thead><tr><th></th>{bsYears.map(y => <th key={y} className="n">{y}</th>)}</tr></thead>
+          <tbody>{BSROWS.map(([l, f, fmt]) => <tr key={l}><td className="lab">{l}</td>{bsYears.map(y => <td key={y} className="n">{fmt(f(D[y].bs, fin && fin[y]))}</td>)}</tr>)}</tbody></table></div>
         <p className="cm-note">Debt is what the hospital carries on its own books. Many system hospitals show little or none because the parent borrows for them; for those, look at the system&apos;s own financial statements.</p>
       </ChartCard>}
 

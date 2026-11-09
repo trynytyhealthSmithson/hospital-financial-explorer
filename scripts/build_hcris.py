@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / 'data/raw/hcris'
 PQ = RAW / 'pq'
 OUT = ROOT / 'public/data/hcris'
-YEARS = [2022, 2023, 2024]          # matches the cost report years in the app
+YEARS = list(range(2016, 2025))  # matches the cost report years in the app
 STATUS = {'1': 'As submitted', '2': 'Settled without audit', '3': 'Settled with audit', '4': 'Reopened', '5': 'Amended'}
 
 con = duckdb.connect()
