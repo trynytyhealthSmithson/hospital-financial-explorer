@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase, countyTitle } from './HospitalMap';
-import { fmtAdj, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
+import { fmtAdj, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
 
 const COLORS = ['#178a84', '#0b1829', '#d4860a', '#b4471f', '#6c5ce7'];
 const MAX = 5;
@@ -30,8 +30,8 @@ export default function Compare({ meta, ids }) {
   const [H, setH] = useState(null), [P, setP] = useState(null), [D, setD] = useState({}), [q, setQ] = useState('');
   const [list, setList] = useState(() => (ids || '').split(',').filter(x => /^[0-9A-Z]{6}$/.test(x)).slice(0, MAX));
   const [year, setYear] = useState(meta.years[meta.years.length - 1]), [tk, setTk] = useState('tm'), [QD, setQD] = useState(null);
-  const [IPD, setIPD] = useState(null);
-  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); }, []);
+  const [IPD, setIPD] = useState(null), [HX, setHX] = useState(null);
+  useEffect(() => { loadQuality().then(setQD); loadIpps().then(setIPD); loadHcrisIdx().then(setHX); }, []);
   const [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SA, setSA] = useState({}), [SL, setSL] = useState(null), [Z, setZ] = useState(null);
   useEffect(() => { Promise.all([loadHospitals(), loadPeers(), loadGeo(), loadMarketsMeta(), loadZips()]).then(([h, p, g, mm, z]) => { setH(h); setP(p); setG(g); setMM(mm); setZ(z);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, []);
@@ -64,6 +64,10 @@ export default function Compare({ meta, ids }) {
     .sort((a, b) => b.sh.reduce((x, v) => x + (v || 0), 0) - a.sh.reduce((x, v) => x + (v || 0), 0)) : [];
   const lines = SL && MM ? MM.sl_order.map(k => ({ k, v: hs.map(h => (SL[h.c] && SL[h.c][k] ? SL[h.c][k][0] : 0)) })).filter(r => r.v.some(x => x > 0)) : [];
 
+  // Payer mix including managed care and Medicare add-ons, from the full cost report files (index: [all Medicare, MA, all Medicaid, Medicaid managed care, MA share of Medicare, add-ons])
+  const hx = HX && HX.years[year];
+  const HROWS = [['Medicare share of days, including Medicare Advantage', 0, v => fmtPct(v, 0)], ['Medicare Advantage share of Medicare days', 4, v => fmtPct(v, 0)],
+    ['Medicaid share of days, including managed care', 2, v => fmtPct(v, 0)], ['Medicare add-on payments (IME, DSH, uncompensated care, GME, outliers)', 5, v => fmtUsdM(v)]];
   return (
     <div>
       <div className="card" style={{ padding: '14px 16px', marginBottom: 14 }}>
@@ -82,7 +86,7 @@ export default function Compare({ meta, ids }) {
 
       {hs.length === 0 ? <div className="card" style={{ padding: 24, color: 'var(--gray-600)' }}>Search for a hospital above to start a comparison.</div> : <>
         <ChartCard title={`Side by side, ${year}`} sub={`Peer median is for ${peerLabel} hospitals (the first hospital's peer group). The strongest value in each favorable-direction row is in bold. Grey values come from reports flagged as unusable.`}
-          csvName={`compare-${year}`} csv={() => [['measure', ...hs.map(nm), `peer median (${peerLabel})`], ...ROWS.filter(r => r.length > 1).map(([k, l, f]) => [l, ...hs.map(h => { const d = rec(h.c); return d ? f(d) : ''; }), peer && peer[k] ? peer[k][1] : ''])]}>
+          csvName={`compare-${year}`} csv={() => [['measure', ...hs.map(nm), `peer median (${peerLabel})`], ...ROWS.filter(r => r.length > 1).map(([k, l, f]) => [l, ...hs.map(h => { const d = rec(h.c); return d ? f(d) : ''; }), peer && peer[k] ? peer[k][1] : '']), ...(hx ? HROWS.map(([l, i]) => [l, ...hs.map(h => (hx[h.c] ? hx[h.c][i] ?? '' : '')), '']) : [])]}>
           <div style={{ overflow: 'auto' }}><table className="cm-table"><thead><tr><th>Measure</th>{hs.map((h, i) => <th key={h.c} className="n" style={{ color: COLORS[i], minWidth: 120 }}><a href={`#h/${h.c}`} style={{ color: 'inherit' }}>{nm(h)}</a></th>)}<th className="n">Peer median</th></tr></thead>
             <tbody>{ROWS.map(r => { if (r.length === 1) return <tr key={r[0]} className="sub"><td colSpan={hs.length + 2}>{r[0]}</td></tr>;
               const [k, l, f, fmt, better] = r; const vals = hs.map(h => { const d = rec(h.c); return d ? f(d) : null; });
@@ -94,7 +98,10 @@ export default function Compare({ meta, ids }) {
                 {QROWS.map(([l, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{QD.h[h.c] ? f(QD.h[h.c]) : 'not rated'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{l.startsWith('Value') ? `${QD.meta.tps_pct[10]} (national)` : ''}</td></tr>)}</>}
               {IPD && <><tr className="sub"><td colSpan={hs.length + 2}>Medicare payment, FY {IPD.meta.fy}</td></tr>
                 {[['Case mix index', p => (p.cmi != null ? p.cmi.toFixed(2) : 'n/a'), `${IPD.meta.cmi_pct[10].toFixed(2)} (national)`], ['Wage index', p => (p.wi != null ? p.wi.toFixed(3) : 'n/a'), ''], ['DSH patient percentage', p => fmtPct(p.dshpct), ''],
-                  ['Value-based purchasing adjustment', p => fmtAdj(p.vbp_f), ''], ['Readmissions penalty', p => fmtAdj(p.hrrp_f), '']].map(([l, f, m]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{IPD.h[h.c] ? f(IPD.h[h.c]) : 'not in PPS'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{m}</td></tr>)}</>}</tbody></table></div>
+                  ['Value-based purchasing adjustment', p => fmtAdj(p.vbp_f), ''], ['Readmissions penalty', p => fmtAdj(p.hrrp_f), '']].map(([l, f, m]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{IPD.h[h.c] ? f(IPD.h[h.c]) : 'not in PPS'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{m}</td></tr>)}</>}
+              {hx && <><tr className="sub"><td colSpan={hs.length + 2}>Payer mix and Medicare add-ons, full cost report {year}</td></tr>
+                {HROWS.map(([l, i, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => { const r = hx[h.c]; const v = r ? r[i] : null; return <td key={h.c} className="n">{r ? (i === 4 && !r[1] ? 'not reported' : v == null || (i === 5 && !v) ? (i === 5 ? 'none' : 'n/a') : f(v)) : 'no report'}</td>; })}
+                  <td className="n" style={{ color: 'var(--gray-600)' }}>{i === 4 && HX.meta.ma_pen[year] ? `${fmtPct(HX.meta.ma_pen[year], 0)} (national)` : ''}</td></tr>)}</>}</tbody></table></div>
         </ChartCard>
 
         <ChartCard title={`${TREND[tk][0]}, ${meta.years[0]} to ${meta.years[meta.years.length - 1]}`} style={{ marginTop: 14 }} filename={`compare-trend-${tk}`}

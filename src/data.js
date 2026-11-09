@@ -196,3 +196,5 @@ export const READM_LABEL = { AMI: 'Heart attack', HF: 'Heart failure', PN: 'Pneu
 export const pctRank = (v, cuts) => { if (v == null || !cuts) return null; let i = 0; while (i < cuts.length - 1 && v > cuts[i + 1]) i++; return Math.min(100, i * 5); };
 export const loadIpps = () => load('ipps', `${BASE}/ipps.json`);
 export const fmtAdj = f => (f == null ? 'n/a' : `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)}%`);
+export const loadHcris = st => load('hcris:' + st, `${BASE}/hcris/${st}.json`);
+export const loadHcrisIdx = () => load('hcrisidx', `${BASE}/hcris_idx.json`);
