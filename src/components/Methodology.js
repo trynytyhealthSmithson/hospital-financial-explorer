@@ -38,6 +38,8 @@ export default function Methodology({ meta }) {
         <li>A hospital&apos;s primary service area is the smallest set of its ZIP codes, largest first, that supplies 75% of its reported cases; the secondary service area extends that to 90%.</li>
         <li>HHI (the Herfindahl index) uses the 2023 merger guideline thresholds and currently treats each hospital on its own. Hospitals in the same health system will be combined once system membership is added.</li>
       </ul>
+      <h3>Health systems</h3>
+      <p>Systems come from the AHRQ Compendium of U.S. Health Systems, 2023 hospital linkage file. Hospitals are grouped by their corporate parent, the organization that operates them, and named with the AHRQ health system name most of the parent&apos;s hospitals carry; a parent needs two or more hospitals to count as a system. This puts a joint venture with its operator (Good Samaritan Hospital in Cincinnati is grouped with TriHealth, which runs it, although AHRQ lists it under part-owner CommonSpirit). Membership is as of 2023 and is applied to every year, so trends show today&apos;s systems, and later mergers are not reflected. System totals add up member hospitals&apos; cost reports and leave out the system&apos;s other businesses, so they will not match consolidated financial statements.</p>
       <h3>Service lines</h3>
       <p>Service lines come from the CMS Medicare Inpatient Hospitals by Provider and Service file: Original Medicare discharges and payments by hospital and MS-DRG for 2016 to 2024. DRGs are grouped into about 20 service lines by DRG number (for example, joint replacement is DRGs 461, 462, 466 to 470, 521 and 522). The groupings are approximate. CMS lists a DRG at a hospital only when it had 11 or more discharges, and the file excludes Medicare Advantage, so totals are lower than the service area counts.</p>
       <h3>Definitions</h3>
@@ -47,7 +49,6 @@ export default function Methodology({ meta }) {
         <li>Cost reports are prepared for Medicare reimbursement and are not audited financial statements. Figures can differ from a hospital&apos;s audited statements or bond disclosures, and are sometimes revised after CMS reviews them.</li>
         <li>Hospitals that belong to a health system may carry cash, investments, debt and some revenue at the system level. Their own report understates those items.</li>
         <li>The latest year is incomplete for hospitals whose fiscal year ended recently, because reports are due five months after year end and CMS posts them after that.</li>
-        <li>Health system membership is not yet included; it will come from the AHRQ Compendium of U.S. Health Systems in a later release.</li>
       </ul>
       <h3>Release notes</h3>
       {RELEASE_NOTES.map(r => <div key={r.version}><b>{r.version}</b> ({r.date})<ul>{r.items.map((x, i) => <li key={i}>{x}</li>)}</ul></div>)}
