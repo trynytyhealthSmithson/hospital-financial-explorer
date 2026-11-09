@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadMarketsMeta, loadMkt, loadSL, loadOthers, marketShare, hhiLabel, fmtInt, fmtPct, fmtPts, fmtUsd, downloadCSV } from '../data';
+import { loadMarketsMeta, loadMkt, loadSL, loadOthers, marketShare, hhiLabel, fmtInt, fmtPct, fmtPts, fmtUsd } from '../data';
 
 /**
  * Market views for a county, state or selected area.
@@ -41,9 +41,9 @@ export default function MarketPanel({ fips, scopeName, H, onHospital }) {
   return (<>
     <ChartCard title={`Where Medicare patients from ${scope} are admitted`} style={{ marginTop: 14 }}
       sub={`Medicare inpatient cases (Original Medicare and Medicare Advantage) by where the patient lives, calendar ${y}. Share is of reported cases; CMS hides any hospital and ZIP code pair with 10 or fewer cases.`}
-      headerRight={<span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <select value={y || ''} onChange={e => setY(+e.target.value)}>{MM.hsaf_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>
-        {share && <button className="cm-link" onClick={() => downloadCSV([['ccn', 'hospital', 'location', 'in_area', 'cases', 'share', 'share_prior_year'], ...share.rows.map(r => [r.c, name(r.c), place(r.c), local.has(r.c) ? 'yes' : 'no', r.n, r.sh, prev[r.c] ?? ''])], `market-share-${y}.csv`)}>Download CSV</button>}</span>}>
+      headerRight={<select value={y || ''} onChange={e => setY(+e.target.value)}>{MM.hsaf_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>}
+      csvName={`market-share-${y}`}
+      csv={share ? () => [['ccn', 'hospital', 'location', 'in_area', 'cases', 'share', 'share_prior_year'], ...share.rows.map(r => [r.c, name(r.c), place(r.c), local.has(r.c) ? 'yes' : 'no', r.n, r.sh, prev[r.c] ?? ''])] : null}>
       {!share ? <div style={{ padding: 30, color: 'var(--gray-500)' }}>Loading {y}…</div> : share.total === 0 ? <p className="cm-note">No reported cases for these counties.</p> : <>
         <div className="cm-kpis" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           <div><b>{fmtInt(share.total)}</b><span>reported inpatient cases from residents</span></div>
@@ -65,7 +65,9 @@ export default function MarketPanel({ fips, scopeName, H, onHospital }) {
 
     <ChartCard title={`Service lines at hospitals in ${scope}`} style={{ marginTop: 14 }}
       sub={`Original Medicare discharges, ${sy}, grouped from MS-DRGs, at hospitals located in the area. Click a service line to see which hospitals lead it.`}
-      headerRight={<select value={sy || ''} onChange={e => setSy(+e.target.value)}>{MM.sl_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>}>
+      headerRight={<select value={sy || ''} onChange={e => setSy(+e.target.value)}>{MM.sl_years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>}
+      csvName={`service-lines-${sy}`}
+      csv={lines && lines.tot ? () => [['service_line', 'ccn', 'hospital', 'discharges', 'share_of_line', 'medicare_paid'], ...lines.rows.flatMap(r => [[MM.sl[r.k], 'all', 'All hospitals in the area', r.d, 1, r.p], ...r.hs.map(h => [MM.sl[r.k], h.c, name(h.c), h.d, h.d / r.d, h.p])])] : null}>
       {!lines ? <div style={{ padding: 30, color: 'var(--gray-500)' }}>Loading…</div> : !lines.tot ? <p className="cm-note">No hospitals in the area report DRG data for {sy}.</p> :
         <div className="cm-grid" style={{ gridTemplateColumns: L ? '1.1fr 1fr' : '1fr' }}>
           <div style={{ overflow: 'auto', maxHeight: 460 }}>

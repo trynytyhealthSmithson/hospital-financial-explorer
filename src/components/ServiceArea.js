@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd, downloadCSV } from '../data';
+import { loadGeo, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, loadOthers, loadHospitals, marketShare, hhiLabel, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsd } from '../data';
 
 // Same projection as the us-atlas Albers county file the maps use
 const proj = geoAlbersUsa().scale(1300).translate([487.5, 305]);
@@ -53,7 +53,9 @@ export default function ServiceArea({ ccn, h }) {
   const maxN = Math.max(1, ...dots.map(d => d.n));
 
   return (<>
-    <ChartCard title="Service area and market share" style={{ marginTop: 14 }}
+    <ChartCard title="Service area and market share" style={{ marginTop: 14 }} png csvName={`service-area-counties-${ccn}-${y}`}
+      csv={() => [['county_fips', 'county', 'cases_from_county', 'hospital_share_of_county', 'in_primary_service_area'], ...Object.keys(cty).sort((a, b) => cty[b] - cty[a]).map(f => [f, countyTitle(G, f), cty[f], shareBy[f], psaCounties.includes(f) ? 'yes' : 'no']),
+        [], ['competitor_ccn', 'competitor', 'cases_in_primary_area_counties', 'share'], ...(comp ? comp.rows.map(r => [r.c, name(r.c), r.n, r.sh]) : [])]}
       sub={`Medicare inpatient cases (Original Medicare and Medicare Advantage) by patient ZIP code, calendar ${y}. The primary service area is the set of ZIP codes that together supply 75% of reported cases; the secondary area takes it to 90%.`}
       headerRight={<select value={y || ''} onChange={e => setY(+e.target.value)}>{years.slice().reverse().map(v => <option key={v} value={v}>{v}</option>)}</select>}>
       <div className="hp-grid" style={{ marginBottom: 12 }}>
@@ -86,13 +88,14 @@ export default function ServiceArea({ ccn, h }) {
 
     <ChartCard title={`Patient ZIP codes, ${zy}`} style={{ marginTop: 14 }}
       sub={`Every ZIP code with 11 or more cases. ZIP-level detail is kept for the two latest years; earlier years are summarized by county above.`}
-      headerRight={<button className="cm-link" onClick={() => downloadCSV([['zip', 'county_fips', 'county', 'cases', 'days', 'share', 'cumulative_share', 'service_area'], ...zrows.map(r => [r.z, r.f, r.f ? countyTitle(G, r.f) : '', r.n, r.d, r.sh, r.cum, r.a])], `service-area-${ccn}-${zy}.csv`)}>Download CSV</button>}>
+      csvName={`service-area-zips-${ccn}-${zy}`} csv={() => [['zip', 'county_fips', 'county', 'cases', 'days', 'share', 'cumulative_share', 'service_area'], ...zrows.map(r => [r.z, r.f, r.f ? countyTitle(G, r.f) : '', r.n, r.d, r.sh, r.cum, r.a])]}>
       <div style={{ overflow: 'auto', maxHeight: 360 }}><table className="cm-table"><thead><tr><th>ZIP</th><th>County</th><th className="n">Cases</th><th className="n">Days</th><th className="n">Share</th><th className="n">Cumulative</th><th>Area</th></tr></thead>
         <tbody>{zrows.slice(0, 200).map(r => <tr key={r.z}><td>{r.z}</td><td>{r.f ? countyTitle(G, r.f) : 'n/a'}</td><td className="n">{fmtInt(r.n)}</td><td className="n">{fmtInt(r.d)}</td><td className="n">{fmtPct(r.sh)}</td><td className="n">{fmtPct(r.cum, 0)}</td><td>{r.a}</td></tr>)}</tbody></table></div>
     </ChartCard>
 
     {lines.length > 0 && <ChartCard title={`Service lines, ${MM.sl_years[MM.sl_years.length - 1]}`} style={{ marginTop: 14 }}
-      sub="Original Medicare discharges grouped from MS-DRGs, with the change since 2019. CMS lists a DRG only when the hospital had 11 or more discharges in it.">
+      sub="Original Medicare discharges grouped from MS-DRGs, with the change since 2019. CMS lists a DRG only when the hospital had 11 or more discharges in it."
+      csvName={`service-lines-${ccn}`} csv={() => [['service_line', 'discharges', 'mix', 'discharges_2019', 'medicare_paid'], ...lines.map(r => [MM.sl[r.k], r.d, r.d / slTot, r.d0 ?? '', r.p])]}>
       <div style={{ overflow: 'auto' }}><table className="cm-table"><thead><tr><th>Service line</th><th className="n">Discharges</th><th className="n">Mix</th><th className="n">Change since 2019</th><th className="n">Medicare paid per discharge</th></tr></thead>
         <tbody>{lines.map(r => <tr key={r.k}><td>{MM.sl[r.k]}</td><td className="n">{fmtInt(r.d)}</td><td className="n">{fmtPct(r.d / slTot)}</td>
           <td className="n" style={{ color: r.d0 ? (r.d > r.d0 ? 'var(--teal-dark)' : r.d < r.d0 ? 'var(--red)' : undefined) : undefined }}>{r.d0 ? `${r.d >= r.d0 ? '+' : '−'}${Math.abs((r.d / r.d0 - 1) * 100).toFixed(0)}%` : 'new'}</td>

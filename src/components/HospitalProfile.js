@@ -71,10 +71,11 @@ export default function HospitalProfile({ ccn, meta }) {
   const flags = L.q || [];
   const loc = `${titleCase(D.addr || '')}, ${titleCase(h.ci || '')}, ${h.s} ${h.z}`;
 
-  const csv = () => downloadCSV([['measure', ...years], ...ROWS.filter(r => r[1]).map(([l, k]) => [l, ...years.map(y => D.years[y][k])]),
+  const csvRows = () => ([['measure', ...years], ...ROWS.filter(r => r[1]).map(([l, k]) => [l, ...years.map(y => D.years[y][k])]),
     ...UROWS.map(([l, k]) => [l, ...years.map(y => D.years[y][k])]), ...KPIS.map(([k, l]) => [l, ...years.map(y => D.years[y].m[k])]),
     ['Report period begins', ...years.map(y => D.years[y].begin)], ['Report period ends', ...years.map(y => D.years[y].end)], ['Months covered', ...years.map(y => D.years[y].months)],
-    ['Data flags', ...years.map(y => (D.years[y].q || []).join(' '))]], `hospital-${ccn}.csv`);
+    ['Data flags', ...years.map(y => (D.years[y].q || []).join(' '))]]);
+  const csv = () => downloadCSV(csvRows(), `hospital-${ccn}.csv`);
 
   return (
     <div>
@@ -92,7 +93,8 @@ export default function HospitalProfile({ ccn, meta }) {
 
       {flags.length > 0 && <div className="hp-flag"><b>About the {Ly} report.</b> {flags.map(f => FLAG_TEXT[f]).filter(Boolean).join(' ')}{hard(flags) ? ' Its margins are shown here but left out of peer medians and area totals.' : ''}</div>}
 
-      <ChartCard title={`${Ly} at a glance, compared with peers`} sub={`Report period ${L.begin} to ${L.end} (${L.months} months${L.n_rep > 1 ? `, ${L.n_rep} reports combined` : ''}). The bar shows the middle half of peers (25th to 75th percentile); the dark mark is this hospital.`}
+      <ChartCard title={`${Ly} at a glance, compared with peers`} csvName={`hospital-${ccn}-peers-${Ly}`}
+        csv={() => [['measure', 'hospital', 'peer_25th', 'peer_median', 'peer_75th', 'peer_group', 'peers'], ...KPIS.map(([k, l]) => { const p = pL && pL[k]; return [l, L.m[k], p ? p[0] : '', p ? p[1] : '', p ? p[2] : '', PEERS[peerKey][1], pL ? pL.n : '']; })]} sub={`Report period ${L.begin} to ${L.end} (${L.months} months${L.n_rep > 1 ? `, ${L.n_rep} reports combined` : ''}). The bar shows the middle half of peers (25th to 75th percentile); the dark mark is this hospital.`}
         headerRight={<label className="cm-field" style={{ margin: 0 }}>Peer group
           <select value={peerKey} onChange={e => setPeerKey(e.target.value)}>{Object.entries(PEERS).map(([k, [, l]]) => <option key={k} value={k}>{l}</option>)}</select></label>}>
         <div className="hp-grid">{KPIS.map(([k, l, f, better, def]) => {
@@ -104,7 +106,7 @@ export default function HospitalProfile({ ccn, meta }) {
       </ChartCard>
 
       <div className="cm-grid" style={{ marginTop: 14 }}>
-        <ChartCard title="Margins over time" sub="Total and patient service margin, with the peer median total margin. Years with an unusable report are left blank." filename={`hospital-${ccn}-margins`}>
+        <ChartCard title="Margins over time" sub="Total and patient service margin, with the peer median total margin. Years with an unusable report are left blank." filename={`hospital-${ccn}-margins`} csv={() => [['year', 'total_margin_pct', 'patient_service_margin_pct', 'peer_median_total_margin_pct'], ...trend.map(t => [t.y, t.tm, t.pm, t.ptm])]}>
           <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} unit="%" />
             <Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
@@ -113,7 +115,7 @@ export default function HospitalProfile({ ccn, meta }) {
             <Line dataKey="ptm" name="Peer median total margin" stroke="var(--slate)" strokeWidth={1.5} dot={false} />
           </LineChart></ResponsiveContainer></div>
         </ChartCard>
-        <ChartCard title="Revenue, expense and cash" sub="Net patient revenue and operating expense in $ millions; days cash on hand with the peer median." filename={`hospital-${ccn}-revenue`}>
+        <ChartCard title="Revenue, expense and cash" sub="Net patient revenue and operating expense in $ millions; days cash on hand with the peer median." filename={`hospital-${ccn}-revenue`} csv={() => [['year', 'net_patient_revenue_millions', 'operating_expense_millions', 'days_cash_on_hand', 'peer_median_days_cash'], ...trend.map(t => [t.y, t.npr, t.opex, t.dcoh, t.pdcoh])]}>
           <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={trend} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
             <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} />
             <YAxis yAxisId="d" tick={{ fontSize: 11 }} unit="M" /><YAxis yAxisId="c" orientation="right" tick={{ fontSize: 11 }} />
@@ -128,7 +130,7 @@ export default function HospitalProfile({ ccn, meta }) {
 
       <ServiceArea ccn={ccn} h={h} />
 
-      <ChartCard title="Financial statements by year" sub="As filed on the Medicare cost report (Worksheets G, G-2, G-3, S-10 and E). Dollars." style={{ marginTop: 14 }}>
+      <ChartCard csvName={`hospital-${ccn}`} csv={csvRows} title="Financial statements by year" sub="As filed on the Medicare cost report (Worksheets G, G-2, G-3, S-10 and E). Dollars." style={{ marginTop: 14 }}>
         <div style={{ overflow: 'auto' }}>
           <table className="cm-table"><thead><tr><th>Line</th>{years.map(y => <th key={y} className="n">{y}</th>)}</tr></thead>
             <tbody>
