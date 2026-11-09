@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 import ChartCard from './ChartCard';
+import { titleCase } from './HospitalMap';
 import { loadHcris, loadHcrisIdx, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const PAYERS = [['Original Medicare', 'var(--navy)'], ['Medicare Advantage', '#4f7cac'], ['Medicaid (fee-for-service)', 'var(--teal-dark)'], ['Medicaid managed care', '#7cc5bf'], ['All other payers', '#cfd6df']];
@@ -30,6 +31,7 @@ export default function CostReportDetail({ ccn, st }) {
   // Add-on payments
   const addYears = years.filter(y => D[y].a);
   const addTot = y => ADD_KEYS.reduce((s, k) => s + (D[y].a[k] || 0), 0);
+  const ffsTot = y => ['out', 'ime', 'dsh', 'ucp'].reduce((s, k) => s + (D[y].a[k] || 0), 0);
 
   // Departments: families for the latest year, cost centers on request
   const fam = L.f || [];
@@ -52,13 +54,13 @@ export default function CostReportDetail({ ccn, st }) {
             <div className="hp-kpi"><b>{fmtInt(lm.t)}</b><span>total inpatient days</span></div>
           </div>
           <div style={{ height: 70 + 34 * mix.length }}><ResponsiveContainer><BarChart data={mix} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#eef1f5" horizontal={false} /><XAxis type="number" domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="y" width={44} tick={{ fontSize: 11 }} />
+            <CartesianGrid stroke="#eef1f5" horizontal={false} /><XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} allowDataOverflow unit="%" tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="y" width={44} tick={{ fontSize: 11 }} />
             <Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
             {PAYERS.map(([k, c]) => <Bar key={k} dataKey={k} stackId="a" fill={c} />)}
           </BarChart></ResponsiveContainer></div>
         </> : <p className="cm-note">This hospital's reports have no inpatient day counts on Worksheet S-3.</p>}
         <p className="cm-note">Days count the hospital and its routine units; distinct-part psych, rehab and skilled nursing units are left out. "All other payers" is everything not reported as Medicare or Medicaid, mostly commercial insurance and self-pay.
-          {ho ? <> Home office on the cost report: <b>{ho[0]}</b> ({[ho[1], ho[2]].filter(Boolean).join(', ')}).</> : ''}</p>
+          {ho ? <> Home office on the cost report: <b>{titleCase(ho[0])}</b> ({[titleCase(ho[1]), ho[2]].filter(Boolean).join(', ')}).</> : ''}</p>
       </ChartCard>
 
       {addYears.length > 0 && <ChartCard title="Medicare inpatient add-on payments" style={{ marginTop: 14 }}
@@ -67,7 +69,7 @@ export default function CostReportDetail({ ccn, st }) {
         <table className="cm-table"><thead><tr><th></th>{addYears.map(y => <th key={y} className="n">{y}</th>)}</tr></thead><tbody>
           {ADDONS.map(([k, l]) => <tr key={k}><td className="lab">{l}</td>{addYears.map(y => <td key={y} className="n">{D[y].a[k] ? fmtUsdM(D[y].a[k]) : ''}</td>)}</tr>)}
           <tr style={{ fontWeight: 600 }}><td className="lab">Total add-ons (excluding base DRG)</td>{addYears.map(y => <td key={y} className="n">{fmtUsdM(addTot(y))}</td>)}</tr>
-          <tr><td className="lab">Add-ons as a share of base DRG payments</td>{addYears.map(y => <td key={y} className="n">{D[y].a.drg ? fmtPct(addTot(y) / D[y].a.drg, 0) : 'n/a'}</td>)}</tr>
+          <tr><td className="lab">Fee-for-service add-ons (outliers, IME, DSH, uncompensated care) as a share of base DRG</td>{addYears.map(y => <td key={y} className="n">{D[y].a.drg ? fmtPct(ffsTot(y) / D[y].a.drg, 0) : 'n/a'}</td>)}</tr>
         </tbody></table>
         <p className="cm-note">Blank means none reported. When a fiscal year spans October 1, the amounts before and after the rate change are added together. Uncompensated care payments are interim amounts; CMS reconciles them later.</p>
       </ChartCard>}

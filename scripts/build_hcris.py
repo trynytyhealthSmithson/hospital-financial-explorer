@@ -138,7 +138,7 @@ for y in YEARS:
             hid = hi[('14000', '00200')].upper()
             o['ho'] = hid
             idx['ho'][ccn] = hid  # later years overwrite earlier ones
-            idx['hos'][hid] = [hi.get(('14100', '00100'), '').title(), hi.get(('14300', '00100'), '').title(), hi.get(('14300', '00200'), '')]
+            idx['hos'][hid] = [hi.get(('14100', '00100'), ''), hi.get(('14300', '00100'), ''), hi.get(('14300', '00200'), '')]
         per_state[STATE[ccn]][ccn][y] = o
         # Compact shares: all Medicare (FFS + MA), MA, all Medicaid (FFS + managed care), Medicaid managed care, MA share of Medicare
         tot = days[4]
