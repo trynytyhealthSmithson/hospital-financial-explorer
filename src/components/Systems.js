@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+import { loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
 
@@ -35,8 +35,8 @@ export function SystemList({ meta }) {
 export function SystemPage({ id, meta }) {
   const [S, setS] = useState(null), [H, setH] = useState(null), [Y, setY] = useState(null), [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null);
   const mapRef = useRef(null);
-  const [HX, setHX] = useState(null), [OP, setOP] = useState(null), [B3, setB3] = useState(null);
-  useEffect(() => { loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); load340b().then(setB3); }, []);
+  const [HX, setHX] = useState(null), [OP, setOP] = useState(null), [B3, setB3] = useState(null), [AC, setAC] = useState(null);
+  useEffect(() => { loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); load340b().then(setB3); loadAco().then(setAC); }, []);
   const Ly = meta.years[meta.years.length - 1];
   useEffect(() => { Promise.all([loadSystems(), loadHospitals(), loadYear(Ly), loadGeo(), loadMarketsMeta()]).then(([s, h, y, g, mm]) => { setS(s); setH(h); setY(y); setG(g); setMM(mm);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, [Ly]);
@@ -66,6 +66,8 @@ export function SystemPage({ id, meta }) {
   const mtrend = years.map(y => { const r = sys.y[String(y)] || {}; return { y, mmm: pc(r.mmm), mapen: pc(r.mapen), mall: pc(r.mall), nat: HX ? pc(HX.meta.mm_margin[y]) : null }; });
   const opl = OP ? (() => { const by = {}; sys.h.forEach(c => Object.entries(OP.h[c] || {}).forEach(([k, r]) => { const b = by[k] || (by[k] = [0, 0, 0]); b[0] += r[0]; b[1] += r[1]; b[2] += r[2] || 0; }));
     return OP.lines.filter(([k]) => by[k]).map(([k, l]) => ({ k, l, s: by[k][0], p: by[k][1], s0: by[k][2] })).sort((a, b) => b.p - a.p); })() : [];
+  const acoOf = c => (AC && AC.h[c] && AC.h[c][String(AC.meta.latest)]) || [];
+  const acos = (() => { const m = {}; sys.h.forEach(c => acoOf(c).forEach(x => { (m[x[0]] = m[x[0]] || { id: x[0], n: x[1], k: 0 }).k += 1; })); return Object.values(m).sort((a, b) => b.k - a.k); })();
   const hxv = (c, i) => { const r = HX && HX.years[Ly] && HX.years[Ly][c]; return r ? r[i] : null; };
   const lines = SL ? (() => { const by = {}; sys.h.forEach(c => Object.entries(SL[c] || {}).forEach(([k, [d]]) => { by[k] = (by[k] || 0) + d; })); const t = Object.values(by).reduce((a, b) => a + b, 0); return MM.sl_order.filter(k => by[k]).map(k => ({ k, d: by[k], mix: by[k] / t })); })() : [];
 
@@ -85,6 +87,7 @@ export function SystemPage({ id, meta }) {
         {L.mall != null && <div className="hp-kpi"><b>{fmtPct(L.mall, 0)}</b><span>of inpatient days are Medicare, including Medicare Advantage</span><i>{L.mapen != null ? `${fmtPct(L.mapen, 0)} of Medicare days are MA` : 'No MA days reported'}; Medicaid {fmtPct(L.mcdsh, 0)}</i></div>}
         {L.age != null && <div className="hp-kpi"><b>{L.age.toFixed(1)} years</b><span>average age of plant</span><i>Accumulated depreciation over annual depreciation, all members</i></div>}
         {B3 && <div className="hp-kpi"><b>{sys.h.filter(c => B3.h[c] && B3.h[c][2]).length} of {sys.h.length}</b><span>member hospitals in 340B</span><i>{fmtInt(sys.h.reduce((t, c) => t + (B3.h[c] && B3.h[c][2] ? B3.h[c][4] : 0), 0))} contract pharmacy arrangements across them</i></div>}
+        {AC && <div className="hp-kpi"><b>{sys.h.filter(c => acoOf(c).length).length} of {sys.h.length}</b><span>member hospitals found in an MSSP ACO, {AC.meta.latest}</span><i>{acos.length ? acos.slice(0, 3).map(a => `${a.n} (${a.k})`).join('; ') : 'None matched by name'}</i></div>}
         {L.add != null && <div className="hp-kpi"><b>{fmtUsdM(L.add)}</b><span>Medicare add-on payments</span><i>Teaching (IME, GME), DSH, uncompensated care and outliers</i></div>}
       </div>
       <div className="cm-grid">
@@ -129,11 +132,11 @@ export function SystemPage({ id, meta }) {
         </div>
       </ChartCard>
       <ChartCard title={`Member hospitals, ${Ly}`} style={{ marginTop: 14 }} csvName={`system-${id}-hospitals-${Ly}`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'medicare_ffs_inpatient_margin', 'ma_share_of_medicare_days', 'type_340b', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hxv(h.c, 6) ?? '', hxv(h.c, 1) ? hxv(h.c, 4) : '', B3 && B3.h[h.c] && B3.h[h.c][2] ? B3.h[h.c][0] : '', hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
-        <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th><th className="n">Medicare inpatient margin</th><th className="n">MA share of Medicare</th><th>340B</th></tr></thead>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'medicare_ffs_inpatient_margin', 'ma_share_of_medicare_days', 'type_340b', 'mssp_aco', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hxv(h.c, 6) ?? '', hxv(h.c, 1) ? hxv(h.c, 4) : '', B3 && B3.h[h.c] && B3.h[h.c][2] ? B3.h[h.c][0] : '', acoOf(h.c).map(x => x[1]).join('; '), hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
+        <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th><th className="n">Medicare inpatient margin</th><th className="n">MA share of Medicare</th><th>340B</th><th>MSSP ACO</th></tr></thead>
           <tbody>{hosp.map(({ h, r }) => <tr key={h.c} style={r && r.flag ? { color: 'var(--gray-500)' } : undefined}><td><a href={`#h/${h.c}`}>{titleCase(h.n)}</a>{hx.has(h.c) && <sup title="Not in the 2023 AHRQ linkage; added because its own cost report names this system's home office" style={{ color: 'var(--teal-dark)', marginLeft: 2 }}>†</sup>}<span className="cm-sttag">{titleCase(h.ci || '')}, {h.s}</span></td><td>{meta.ftype[h.t]}</td>
             {r ? <><td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td><td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td><td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td></> : <td colSpan={5} style={{ color: 'var(--gray-500)' }}>No {Ly} report</td>}
-            <td className="n">{hxv(h.c, 6) == null ? '' : fmtPct(hxv(h.c, 6))}</td><td className="n">{hxv(h.c, 1) ? fmtPct(hxv(h.c, 4), 0) : ''}</td><td>{B3 && B3.h[h.c] && B3.h[h.c][2] ? B3.h[h.c][0] : ''}</td></tr>)}</tbody></table></div>
+            <td className="n">{hxv(h.c, 6) == null ? '' : fmtPct(hxv(h.c, 6))}</td><td className="n">{hxv(h.c, 1) ? fmtPct(hxv(h.c, 4), 0) : ''}</td><td>{B3 && B3.h[h.c] && B3.h[h.c][2] ? B3.h[h.c][0] : ''}</td><td style={{ fontSize: 11 }}>{acoOf(h.c).map(x => <div key={x[0]}><a href={`${MSSP_URL}/#aco/${x[0]}`} target="_blank" rel="noreferrer">{x[1]}</a></div>)}</td></tr>)}</tbody></table></div>
         <p className="cm-note">{hx.size > 0 && <>† {hx.size} {hx.size === 1 ? 'hospital is' : 'hospitals are'} not in the 2023 AHRQ linkage and {hx.size === 1 ? 'was' : 'were'} added because {hx.size === 1 ? 'its' : 'their'} own cost report names this system&apos;s home office. </>}{NOTE} Combined figures add up member hospitals&apos; own cost reports, so they leave out the system&apos;s physician groups, insurance plans, investments and other businesses, and will not match a system&apos;s consolidated financial statements.</p>
       </ChartCard>
     </div>

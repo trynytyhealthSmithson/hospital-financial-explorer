@@ -8,6 +8,7 @@ import PaymentCard from './Payment';
 import CostReportDetail from './CostReportDetail';
 import OutpatientCard from './Outpatient';
 import Card340b from './Card340b';
+import CardAco from './CardAco';
 import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -142,6 +143,7 @@ export default function HospitalProfile({ ccn, meta }) {
       <CostReportDetail ccn={ccn} st={h.s} fin={D.years} />
       <OutpatientCard ccn={ccn} st={h.s} />
       <Card340b ccn={ccn} />
+      <CardAco ccn={ccn} />
 
       <ServiceArea ccn={ccn} h={h} />
 
