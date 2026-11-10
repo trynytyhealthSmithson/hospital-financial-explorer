@@ -566,7 +566,7 @@ button {
 .cm-kpis span{font-size:11.5px;color:var(--gray-600)}
 .cm-note{font-size:11.5px;color:var(--gray-600);line-height:1.5;margin:8px 0 0}
 .cm-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
-.cm-panel{min-width:0;overflow:hidden}
+.cm-panel{min-width:0;overflow-x:auto;overflow-y:hidden}
 .cm-panel .cm-table td:first-child{min-width:150px}
 .cm-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-600);border-bottom:1px solid var(--gray-300);padding:6px 6px;position:sticky;top:0;background:#fff}
 .cm-table td{border-bottom:1px solid var(--gray-200);padding:6px 5px;vertical-align:top}
@@ -673,3 +673,7 @@ button {
 .cm-table tr.sub td{font-weight:700;color:var(--navy);background:var(--gray-50,#f7f8fa)}
 .bar-cell{position:relative;display:inline-block;min-width:74px;text-align:right}
 .bar-cell i{position:absolute;left:0;top:50%;height:6px;margin-top:-3px;background:var(--teal-light,#cfe9e7);border-radius:2px;max-width:40px}
+
+/* Numeric table headers may wrap so panel tables fit their card */
+.cm-table th.n{white-space:normal}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
