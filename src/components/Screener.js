@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER } from '../data';
+import { loadOwnership, loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER } from '../data';
 
 const REGION = {
   Northeast: ['CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA'],
@@ -24,6 +24,7 @@ const PRESETS = [
   ['Penalized for hospital-acquired conditions and losing money', { t: 'STH', hacp: '1', tm_max: '0' }],
   ['Acute care hospitals where most Medicare days are Medicare Advantage', { t: 'STH', mapen_min: '60' }],
   ['340B hospitals losing money', { t: 'STH,CAH', b340: '1', tm_max: '0' }],
+  ['Hospitals that changed owners since 2021', { t: 'STH,CAH', chow: '1' }],
   ['Large hospitals (300+ beds) with negative patient margins and positive total margins', { t: 'STH', beds_min: '300', pm_max: '0', tm_min: '0' }],
 ];
 const COLS = [['n', 'Hospital'], ['beds', 'Beds'], ['npr', 'Net patient revenue'], ['tm', 'Total margin'], ['dtm', '3-year change'], ['pm', 'Patient margin'], ['dcoh', 'Days cash'], ['occ', 'Occupancy'], ['mall', 'Medicare days (incl. MA)'], ['mapen', 'MA share of Medicare'], ['cmi', 'CMI'], ['star', 'Stars']];
@@ -33,8 +34,8 @@ export default function Screener({ meta, query, onHospital }) {
   const [F, setF] = useState(() => { const p = new URLSearchParams(query || ''); const o = Object.fromEntries(p.entries()); if (!o.t) o.t = 'STH,CAH'; return o; });
   const [H, setH] = useState(null), [Y, setY] = useState(null), [Y3, setY3] = useState(null), [sort, setSort] = useState('npr');
   const year = +(F.y || last);
-  const [QD, setQD] = useState(null), [IP, setIP] = useState(null), [HX, setHX] = useState(null), [B3, setB3] = useState(null), [AC, setAC] = useState(null);
-  useEffect(() => { loadHospitals().then(setH); loadQuality().then(setQD); loadIpps().then(setIP); loadHcrisIdx().then(setHX); load340b().then(setB3); loadAco().then(setAC); }, []);
+  const [QD, setQD] = useState(null), [IP, setIP] = useState(null), [HX, setHX] = useState(null), [B3, setB3] = useState(null), [AC, setAC] = useState(null), [OW, setOW] = useState(null);
+  useEffect(() => { loadHospitals().then(setH); loadQuality().then(setQD); loadIpps().then(setIP); loadHcrisIdx().then(setHX); load340b().then(setB3); loadAco().then(setAC); loadOwnership().then(setOW); }, []);
   useEffect(() => { setY(null); loadYear(year).then(setY); if (meta.years.includes(year - 3)) loadYear(year - 3).then(setY3); else setY3(null); }, [year, meta.years]);
   // Keep filters in the page address so a screen can be bookmarked or shared
   useEffect(() => { const p = new URLSearchParams(Object.entries(F).filter(([, v]) => v !== '' && v != null)); window.history.replaceState(null, '', `#screener?${p.toString()}`); }, [F]);
@@ -63,9 +64,12 @@ export default function Screener({ meta, query, onHospital }) {
       if (F.b340 === '1' && !in340) return; if (F.b340 === '0' && in340) return;
       const ac = AC && AC.h[h.c] ? AC.h[h.c][String(AC.meta.latest)] : null;
       if (F.aco === '1' && !ac) return; if (F.aco === '0' && ac) return;
+      const ow = OW ? (OW.chow[h.c] || []).filter(e => e[0] >= '2021-01-01' && e[1] !== 'merged_into') : []; const cl = OW ? OW.closed[h.c] : null;
+      if (F.chow === '1' && !ow.length) return;
+      if (F.closed === '1' && !cl) return; if (F.closed === '0' && cl) return;
       const p = Y3 && Y3.byIdx.get(i);
       const x = { ...r, h, mcr: r.days ? r.mcr_days / r.days : null, mcd: r.days ? r.mcd_days / r.days : null,
-        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, in340, cp340: in340 ? b3[4] : null, aco: ac ? ac.map(x => x[1]).join('; ') : '', cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
+        dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, in340, cp340: in340 ? b3[4] : null, aco: ac ? ac.map(x => x[1]).join('; ') : '', chow: ow.length ? ow[0][0] : '', closed: cl ? cl[0] : '', cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
       for (const [k] of RANGES) {
         const lo = F[k + '_min'], hi = F[k + '_max']; if ((lo == null || lo === '') && (hi == null || hi === '')) continue;
         let v = x[k]; if (v == null) return;
@@ -76,10 +80,10 @@ export default function Screener({ meta, query, onHospital }) {
       out.push(x);
     });
     return out.sort((a, b) => (sort === 'n' ? a.h.n.localeCompare(b.h.n) : (b[sort] ?? -1e15) - (a[sort] ?? -1e15)));
-  }, [H, Y, Y3, F, sort, QD, IP, HX, B3, AC, year]);
+  }, [H, Y, Y3, F, sort, QD, IP, HX, B3, AC, OW, year]);
 
   const tms = rows.filter(r => !r.flag).map(r => r.tm);
-  const active = RANGES.filter(([k]) => F[k + '_min'] || F[k + '_max']).length + ['r', 's', 'g', 'ru', 'te', 'hacp', 'b340', 'aco'].filter(k => F[k]).length;
+  const active = RANGES.filter(([k]) => F[k + '_min'] || F[k + '_max']).length + ['r', 's', 'g', 'ru', 'te', 'hacp', 'b340', 'aco', 'chow', 'closed'].filter(k => F[k]).length;
   const inp = { width: 64, font: '12px var(--font)', padding: '4px 6px', border: '1px solid var(--slate-light)', borderRadius: 5 };
 
   return (
@@ -110,14 +114,16 @@ export default function Screener({ meta, query, onHospital }) {
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.hacp} onChange={e => set('hacp', e.target.checked ? '1' : '')} /> Took the hospital-acquired condition penalty (FY 2026)</label>
           <label className="cm-field" style={{ margin: 0 }}>340B<select value={F.b340 || ''} onChange={e => set('b340', e.target.value)}><option value="">Any</option><option value="1">Participating</option><option value="0">Not participating</option></select></label>
           <label className="cm-field" style={{ margin: 0 }}>MSSP ACO{AC ? ` (${AC.meta.latest})` : ''}<select value={F.aco || ''} onChange={e => set('aco', e.target.value)}><option value="">Any</option><option value="1">In an ACO</option><option value="0">Not found in an ACO</option></select></label>
+          <label className="cm-field" style={{ margin: 0 }}>Ownership<select value={F.chow || ''} onChange={e => set('chow', e.target.value)}><option value="">Any</option><option value="1">Changed owner or merged since 2021</option></select></label>
+          <label className="cm-field" style={{ margin: 0 }}>Closures<select value={F.closed || ''} onChange={e => set('closed', e.target.value)}><option value="">Any</option><option value="0">Leave out closed or converted</option><option value="1">Only closed or converted (rural)</option></select></label>
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.flag} onChange={e => set('flag', e.target.checked ? '1' : '')} /> Include reports flagged as unusable</label>
         </div>
       </div>
 
       <ChartCard title={!H || !Y ? 'Loading…' : `${fmtInt(rows.length)} hospitals match`} csvName={`hospital-screen-${year}`}
         sub={!H || !Y ? '' : `${year} cost reports${active ? `, ${active} ${active === 1 ? 'filter' : 'filters'}` : ''}. Median total margin of these hospitals: ${fmtPct(median(tms))}. The 3-year change compares with ${year - 3}. The page address keeps your filters, so you can bookmark or share this screen.`}
-        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'in_340b', 'contract_pharmacies_340b', 'mssp_aco', 'flagged'],
-          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.in340 ? 'yes' : 'no', r.cp340 ?? '', r.aco, r.flag ? 'yes' : 'no'])]}>
+        csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'in_340b', 'contract_pharmacies_340b', 'mssp_aco', 'latest_ownership_change_since_2021', 'closed_or_converted_year', 'flagged'],
+          ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.in340 ? 'yes' : 'no', r.cp340 ?? '', r.aco, r.chow, r.closed, r.flag ? 'yes' : 'no'])]}>
         <div style={{ overflow: 'auto', maxHeight: 620 }}>
           <table className="cm-table"><thead><tr>
             {COLS.map(([k, l]) => <th key={k} className={k === 'n' ? '' : 'n'} style={{ cursor: 'pointer', color: sort === k ? 'var(--teal-dark)' : undefined }} onClick={() => setSort(k)}>{l}{sort === k ? ' ▾' : ''}</th>)}<th>Type</th></tr></thead>

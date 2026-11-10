@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.4', date: 'November 2026', items: [
+      'Ownership changes and mergers from CMS Medicare enrollment records (2016 to 2026) on hospital profiles and system pages, with a screener filter and preset.',
+      'Rural hospital closures and conversions (including Rural Emergency Hospitals) from the UNC Sheps Center: a banner on affected hospital profiles and a screener filter.',
+    ],
+  },
+  {
     version: 'Beta 2.3', date: 'November 2026', items: [
       'Medicare Shared Savings Program ACOs: the ACOs each hospital takes part in (2022 to 2026, matched by legal business name), with track and links to the ACO in the TRYNYTY MSSP Explorer, on hospital profiles, Compare Hospitals and system pages, plus a screener filter.',
     ],

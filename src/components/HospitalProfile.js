@@ -9,6 +9,7 @@ import CostReportDetail from './CostReportDetail';
 import OutpatientCard from './Outpatient';
 import Card340b from './Card340b';
 import CardAco from './CardAco';
+import OwnershipCard, { ClosureBanner } from './Ownership';
 import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
@@ -101,6 +102,7 @@ export default function HospitalProfile({ ccn, meta }) {
         </div>
       </div>
 
+      <ClosureBanner ccn={ccn} />
       {flags.length > 0 && <div className="hp-flag"><b>About the {Ly} report.</b> {flags.map(f => FLAG_TEXT[f]).filter(Boolean).join(' ')}{hard(flags) ? ' Its margins are shown here but left out of peer medians and area totals.' : ''}</div>}
 
       <ChartCard title={`${Ly} at a glance, compared with peers`} csvName={`hospital-${ccn}-peers-${Ly}`}
@@ -144,6 +146,7 @@ export default function HospitalProfile({ ccn, meta }) {
       <OutpatientCard ccn={ccn} st={h.s} />
       <Card340b ccn={ccn} />
       <CardAco ccn={ccn} />
+      <OwnershipCard ccn={ccn} />
 
       <ServiceArea ccn={ccn} h={h} />
 
