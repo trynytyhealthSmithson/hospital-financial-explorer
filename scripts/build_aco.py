@@ -52,30 +52,35 @@ for c, ns in names.items():
     for n in ns:
         if n: by_name[n].append(c)
 
-def year_of(f):
-    m = re.search(r'(20\d\d)', f.name); return int(m.group(1))
-out = defaultdict(lambda: defaultdict(list)); stats = {}
-for f in sorted(RAW.glob('*.csv'), key=year_of):
-    y = year_of(f)
-    d = pd.read_csv(f, dtype=str, encoding='utf-8-sig')
-    d.columns = [c.strip().lower() for c in d.columns]
-    n = 0; seen = set()
-    for r in d.itertuples():
-        k = norm(r.par_lbn)
-        if not k or k not in by_name: continue
-        states = set(re.findall(r'[A-Z]{2}', r.aco_service_area or ''))
-        cands = [c for c in by_name[k] if ST[c] in states]
-        if len(set(cands)) != 1: continue
-        c = cands[0]
-        if (c, r.aco_id) in seen: continue
-        seen.add((c, r.aco_id))
-        track = 'ENHANCED' if getattr(r, 'enhanced_track', '0') == '1' else (f"BASIC {getattr(r, 'basic_track_level', '')}".strip() if getattr(r, 'basic_track', '0') == '1' else None)
-        out[c][str(y)].append([r.aco_id.strip(), r.aco_name, r.par_lbn, track, getattr(r, 'initial_start_date', None)])
-        n += 1
-    stats[y] = {'participants': len(d), 'hospital_matches': n, 'hospitals': len({c for c, _ in seen})}
-    print(y, stats[y], flush=True)
-years = sorted(stats)
-meta = {'years': years, 'latest': years[-1], 'stats': stats, 'source': 'CMS Medicare Shared Savings Program ACO Participants files, data.cms.gov; hospitals matched by name'}
-json.dump({'meta': meta, 'h': out}, open(ROOT / 'public/data/aco.json', 'w'), separators=(',', ':'), allow_nan=False)
-print('hospitals ever matched', len(out), (ROOT / 'public/data/aco.json').stat().st_size // 1024, 'KB')
-for c in ['360134', '360003', '360179', '360180']: print(c, dict(out.get(c, {})).get(str(years[-1])))
+def main():
+    def year_of(f):
+        m = re.search(r'(20\d\d)', f.name); return int(m.group(1))
+    out = defaultdict(lambda: defaultdict(list)); stats = {}
+    for f in sorted(RAW.glob('*.csv'), key=year_of):
+        y = year_of(f)
+        d = pd.read_csv(f, dtype=str, encoding='utf-8-sig')
+        d.columns = [c.strip().lower() for c in d.columns]
+        n = 0; seen = set()
+        for r in d.itertuples():
+            k = norm(r.par_lbn)
+            if not k or k not in by_name: continue
+            states = set(re.findall(r'[A-Z]{2}', r.aco_service_area or ''))
+            cands = [c for c in by_name[k] if ST[c] in states]
+            if len(set(cands)) != 1: continue
+            c = cands[0]
+            if (c, r.aco_id) in seen: continue
+            seen.add((c, r.aco_id))
+            track = 'ENHANCED' if getattr(r, 'enhanced_track', '0') == '1' else (f"BASIC {getattr(r, 'basic_track_level', '')}".strip() if getattr(r, 'basic_track', '0') == '1' else None)
+            out[c][str(y)].append([r.aco_id.strip(), r.aco_name, r.par_lbn, track, getattr(r, 'initial_start_date', None)])
+            n += 1
+        stats[y] = {'participants': len(d), 'hospital_matches': n, 'hospitals': len({c for c, _ in seen})}
+        print(y, stats[y], flush=True)
+    years = sorted(stats)
+    meta = {'years': years, 'latest': years[-1], 'stats': stats, 'source': 'CMS Medicare Shared Savings Program ACO Participants files, data.cms.gov; hospitals matched by name'}
+    json.dump({'meta': meta, 'h': out}, open(ROOT / 'public/data/aco.json', 'w'), separators=(',', ':'), allow_nan=False)
+    print('hospitals ever matched', len(out), (ROOT / 'public/data/aco.json').stat().st_size // 1024, 'KB')
+    for c in ['360134', '360003', '360179', '360180']: print(c, dict(out.get(c, {})).get(str(years[-1])))
+
+
+if __name__ == '__main__':
+    main()

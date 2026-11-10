@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+import { loadOwnership, loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
 
@@ -35,8 +35,8 @@ export function SystemList({ meta }) {
 export function SystemPage({ id, meta }) {
   const [S, setS] = useState(null), [H, setH] = useState(null), [Y, setY] = useState(null), [G, setG] = useState(null), [MM, setMM] = useState(null), [M, setM] = useState(null), [SL, setSL] = useState(null);
   const mapRef = useRef(null);
-  const [HX, setHX] = useState(null), [OP, setOP] = useState(null), [B3, setB3] = useState(null), [AC, setAC] = useState(null);
-  useEffect(() => { loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); load340b().then(setB3); loadAco().then(setAC); }, []);
+  const [HX, setHX] = useState(null), [OP, setOP] = useState(null), [B3, setB3] = useState(null), [AC, setAC] = useState(null), [OW, setOW] = useState(null);
+  useEffect(() => { loadHcrisIdx().then(setHX); loadOpIdx().then(setOP); load340b().then(setB3); loadAco().then(setAC); loadOwnership().then(setOW); }, []);
   const Ly = meta.years[meta.years.length - 1];
   useEffect(() => { Promise.all([loadSystems(), loadHospitals(), loadYear(Ly), loadGeo(), loadMarketsMeta()]).then(([s, h, y, g, mm]) => { setS(s); setH(h); setY(y); setG(g); setMM(mm);
     loadMkt(mm.hsaf_years[mm.hsaf_years.length - 1]).then(setM); loadSL(mm.sl_years[mm.sl_years.length - 1]).then(setSL); }); }, [Ly]);
@@ -66,6 +66,7 @@ export function SystemPage({ id, meta }) {
   const mtrend = years.map(y => { const r = sys.y[String(y)] || {}; return { y, mmm: pc(r.mmm), mapen: pc(r.mapen), mall: pc(r.mall), nat: HX ? pc(HX.meta.mm_margin[y]) : null }; });
   const opl = OP ? (() => { const by = {}; sys.h.forEach(c => Object.entries(OP.h[c] || {}).forEach(([k, r]) => { const b = by[k] || (by[k] = [0, 0, 0]); b[0] += r[0]; b[1] += r[1]; b[2] += r[2] || 0; }));
     return OP.lines.filter(([k]) => by[k]).map(([k, l]) => ({ k, l, s: by[k][0], p: by[k][1], s0: by[k][2] })).sort((a, b) => b.p - a.p); })() : [];
+  const owEv = OW ? sys.h.flatMap(c => (OW.chow[c] || []).filter(e => e[0] >= '2021-01-01').map(e => ({ c, e }))).sort((a, b) => (b.e[0] || '').localeCompare(a.e[0] || '')) : [];
   const acoOf = c => (AC && AC.h[c] && AC.h[c][String(AC.meta.latest)]) || [];
   const acos = (() => { const m = {}; sys.h.forEach(c => acoOf(c).forEach(x => { (m[x[0]] = m[x[0]] || { id: x[0], n: x[1], k: 0 }).k += 1; })); return Object.values(m).sort((a, b) => b.k - a.k); })();
   const hxv = (c, i) => { const r = HX && HX.years[Ly] && HX.years[Ly][c]; return r ? r[i] : null; };
@@ -131,6 +132,13 @@ export function SystemPage({ id, meta }) {
             <tbody>{cty.slice(0, 40).map(r => <tr key={r.f}><td><a href={`#map/${r.f}`}>{countyTitle(G, r.f)}</a></td><td className="n">{fmtInt(r.me)}</td><td className="n">{fmtPct(r.sh)}</td></tr>)}</tbody></table></div>
         </div>
       </ChartCard>
+      {owEv.length > 0 && <ChartCard title="Ownership changes since 2021" style={{ marginTop: 14 }} csvName={`system-${id}-ownership`}
+        sub="Changes of ownership and mergers at member hospitals, from Medicare enrollment records (CMS)."
+        csv={() => [['effective_date', 'ccn', 'hospital', 'event', 'other_hospital', 'other_ccn', 'owner_after', 'owner_before'], ...owEv.map(({ c, e }) => [e[0], c, byC[c] ? byC[c].n : '', e[1], e[2] || '', e[3] || '', e[4] || '', e[5] || ''])]}>
+        <div style={{ overflow: 'auto', maxHeight: 300 }}><table className="cm-table"><thead><tr><th>Effective</th><th>Hospital</th><th>Event</th></tr></thead>
+          <tbody>{owEv.map(({ c, e }, i) => <tr key={i}><td>{e[0] ? e[0].slice(0, 7) : ''}</td><td><a href={`#h/${c}`}>{byC[c] ? titleCase(byC[c].n) : c}</a></td>
+            <td style={{ fontSize: 12 }}>{e[1] === 'new_owner' ? `New owner: ${titleCase(e[4] || '')}${e[5] ? ` (from ${titleCase(e[5])})` : ''}` : e[1] === 'absorbed' ? `Took in ${titleCase(e[2] || '')} (${e[3]})` : `Merged into ${titleCase(e[2] || '')} (${e[3]})`}</td></tr>)}</tbody></table></div>
+      </ChartCard>}
       <ChartCard title={`Member hospitals, ${Ly}`} style={{ marginTop: 14 }} csvName={`system-${id}-hospitals-${Ly}`}
         csv={() => [['ccn', 'hospital', 'city', 'state', 'type', 'beds', 'net_patient_revenue', 'total_margin', 'patient_service_margin', 'days_cash_on_hand', 'medicare_ffs_inpatient_margin', 'ma_share_of_medicare_days', 'type_340b', 'mssp_aco', 'membership_source'], ...hosp.map(({ h, r }) => [h.c, h.n, h.ci, h.s, meta.ftype[h.t], r && r.beds, r && r.npr, r && r.tm, r && r.pm, r && r.dcoh, hxv(h.c, 6) ?? '', hxv(h.c, 1) ? hxv(h.c, 4) : '', B3 && B3.h[h.c] && B3.h[h.c][2] ? B3.h[h.c][0] : '', acoOf(h.c).map(x => x[1]).join('; '), hx.has(h.c) ? 'cost report home office' : 'AHRQ 2023'])]}>
         <div style={{ overflow: 'auto', maxHeight: 520 }}><table className="cm-table"><thead><tr><th>Hospital</th><th>Type</th><th className="n">Beds</th><th className="n">Net patient revenue</th><th className="n">Total margin</th><th className="n">Patient margin</th><th className="n">Days cash</th><th className="n">Medicare inpatient margin</th><th className="n">MA share of Medicare</th><th>340B</th><th>MSSP ACO</th></tr></thead>

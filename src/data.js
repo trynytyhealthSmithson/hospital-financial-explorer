@@ -202,3 +202,4 @@ export const loadOp = st => load('op:' + st, `${BASE}/op/${st}.json`);
 export const loadOpIdx = () => load('opidx', `${BASE}/op_idx.json`);
 export const load340b = () => load('340b', `${BASE}/340b.json`);
 export const loadAco = () => load('aco', `${BASE}/aco.json`);
+export const loadOwnership = () => load('own', `${BASE}/ownership.json`);
