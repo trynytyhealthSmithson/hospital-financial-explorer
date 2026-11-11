@@ -4,7 +4,7 @@ import MarketPanel from './MarketPanel';
 import UsMap, { SeqLegend, DivLegend, visibleCounties, unionBounds } from './UsMap';
 import {
   loadIpps, loadQuality, loadGeo, loadHospitals, loadYear, quantileBreaks, colorFor, divBreaks, divColor, fmtInt, fmtPct, fmtUsdM, fmtDays,
-  ST_FIPS, FIPS_ST, MEASURES, FTYPE_ORDER, rollup, MA_URL, MSSP_URL,
+  ST_FIPS, FIPS_ST, MEASURES, FTYPE_ORDER, rollup, MA_URL, MSSP_URL, PHYS_URL,
 } from '../data';
 
 const DEFAULT_TYPES = ['STH', 'CAH'];
@@ -148,7 +148,7 @@ export default function HospitalMap({ meta, route, onHospital }) {
             <div><b>{fmtPct(S.unc)}</b><span>of costs are uncompensated care</span></div>
           </div>
           <p className="cm-note">{S.n - S.clean > 0 ? `${S.n - S.clean} of ${S.n} ${S.n - S.clean === 1 ? 'report is' : 'reports are'} left out of margins and medians because they cover part of a year or have missing or implausible revenue. ` : ''}Combined margins weight each hospital by its revenue; the median hospital shows the typical one. Patient service margin leaves out other income (investment income, grants, contributions and some operating revenue), so it often runs below zero even for strong hospitals. <a href="#methodology">How these are calculated</a></p>
-          {county && <p className="cm-note">Medicare Advantage and ACO activity in this county: <a href={`${MA_URL}/#map/${county}`} target="_blank" rel="noreferrer">MA Enrollment Explorer</a> · <a href={`${MSSP_URL}/#map/${county}`} target="_blank" rel="noreferrer">MSSP Explorer</a></p>}
+          {county && <p className="cm-note">Medicare Advantage, ACO and physician activity in this county: <a href={`${MA_URL}/#map/${county}`} target="_blank" rel="noreferrer">MA Enrollment Explorer</a> · <a href={`${MSSP_URL}/#map/${county}`} target="_blank" rel="noreferrer">MSSP Explorer</a> · <a href={`${PHYS_URL}/#map/${county}`} target="_blank" rel="noreferrer">Physician &amp; Practice Explorer</a></p>}
         </div>
       </div>
 
