@@ -11,6 +11,7 @@ export const NODATA = '#eef1f5';
 export const RURAL = { F: 'Fully rural', P: 'Partly rural', N: 'Not rural' };
 export const MSSP_URL = 'https://mssppuf.trynytyhealth.com';
 export const MA_URL = 'https://maenroll.trynytyhealth.com';
+export const PHYS_URL = 'https://physicians.trynytyhealth.com';
 
 const cache = {};
 const load = (key, url) => (cache[key] = cache[key] || fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} ${url}`); return r.json(); }));

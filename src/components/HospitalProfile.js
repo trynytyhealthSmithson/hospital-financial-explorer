@@ -10,7 +10,7 @@ import OutpatientCard from './Outpatient';
 import Card340b from './Card340b';
 import CardAco from './CardAco';
 import OwnershipCard, { ClosureBanner } from './Ownership';
-import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL } from '../data';
+import { loadSystems, loadHospitals, loadState, loadPeers, fmtInt, fmtPct, fmtUsdM, fmtUsd, fmtDays, downloadCSV, MA_URL, MSSP_URL, PHYS_URL } from '../data';
 
 // Measures compared with peers. better: which direction is favorable (null when neither is)
 const KPIS = [
@@ -97,6 +97,8 @@ export default function HospitalProfile({ ccn, meta }) {
           {h.f && <a href={`#map/${h.f}`}>Other hospitals in this county</a>}
           {h.f && <a href={`${MA_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">Medicare Advantage in this county</a>}
           {h.f && <a href={`${MSSP_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">ACOs in this county</a>}
+          <a href={`${PHYS_URL}/#h/${ccn}`} target="_blank" rel="noreferrer">Affiliated clinicians and groups</a>
+          {h.f && <a href={`${PHYS_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">Physicians in this county</a>}
           <a href={`#compare/${ccn}`}>Compare with other hospitals</a>
           <button className="cm-link" onClick={csv}>Download all years (CSV)</button>
         </div>

@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ChartCard from './ChartCard';
 import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
-import { loadOwnership, loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
+import { loadOwnership, loadAco, MSSP_URL, PHYS_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM } from '../data';
 
 const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
 
@@ -77,7 +77,7 @@ export function SystemPage({ id, meta }) {
       <div className="card" style={{ padding: '16px 18px', marginBottom: 14 }}>
         <div className="cm-kicker">Health system · {sys.h.length} hospitals in {sys.st.length} {sys.st.length === 1 ? 'state' : 'states'}{sys.ci ? ` · Headquartered in ${titleCase(sys.ci)}, ${sys.s}` : ''}</div>
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{sys.n}</h1>
-        <div style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}><a href="#systems">All health systems</a>{sys.h.length <= 5 && <a href={`#compare/${sys.h.join(',')}`}>Compare its hospitals</a>}</div>
+        <div style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}><a href="#systems">All health systems</a>{sys.h.length <= 5 && <a href={`#compare/${sys.h.join(',')}`}>Compare its hospitals</a>}<a href={`${PHYS_URL}/#sys/${id}`} target="_blank" rel="noreferrer">Aligned physician groups and consolidation</a></div>
       </div>
       <div className="hp-grid" style={{ marginBottom: 14 }}>
         <div className="hp-kpi"><b>{fmtUsdM(L.npr)}</b><span>net patient revenue, {Ly}</span><i>{fmtInt(L.beds)} beds, {fmtInt(L.dis)} discharges</i></div>
