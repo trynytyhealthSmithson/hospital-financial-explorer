@@ -677,3 +677,6 @@ button {
 /* Numeric table headers may wrap so panel tables fit their card */
 .cm-table th.n{white-space:normal}
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+
+/* facility network adequacy */
+.na-banner{background:#fff8e6;border:1px solid #f0d9a0;border-radius:var(--radius);padding:10px 14px;font-size:12.5px;color:var(--gray-700);line-height:1.5}

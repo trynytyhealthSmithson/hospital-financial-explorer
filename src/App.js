@@ -6,6 +6,7 @@ import Compare from './components/Compare';
 import { SystemList, SystemPage } from './components/Systems';
 import HospitalProfile from './components/HospitalProfile';
 import Methodology from './components/Methodology';
+import FacilityAdequacy from './components/FacilityAdequacy';
 import { loadMeta } from './data';
 import { DATA_RELEASE } from './content';
 
@@ -15,9 +16,10 @@ const NAV = [
   { id: 'screener', label: 'Hospital Screener', section: 'Explore' },
   { id: 'compare', label: 'Compare Hospitals', section: 'Explore' },
   { id: 'systems', label: 'Health Systems', section: 'Explore' },
+  { id: 'adequacy', label: 'Facility Adequacy', section: 'Explore' },
   { id: 'methodology', label: 'Methodology', section: 'Reference' },
 ];
-const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', compare: 'Compare Hospitals', systems: 'Health Systems', sys: 'Health System', h: 'Hospital Profile', methodology: 'Methodology' };
+const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', compare: 'Compare Hospitals', systems: 'Health Systems', adequacy: 'Facility Network Adequacy', sys: 'Health System', h: 'Hospital Profile', methodology: 'Methodology' };
 const APP = 'Hospital Financial Explorer';
 
 // Hash routes: #overview, #map, #map/OH, #map/39061, #map/area/39061,21015, #h/360180, #screener?t=CAH&tm_max=0, #methodology
@@ -97,6 +99,7 @@ export default function App() {
           {!meta ? <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div> : <>
             {route.page === 'overview' && <Overview meta={meta} setPage={setPage} />}
             {route.page === 'systems' && <SystemList meta={meta} />}
+            {route.page === 'adequacy' && <FacilityAdequacy route={route} />}
             {route.page === 'sys' && <SystemPage key={route.id} id={route.id} meta={meta} />}
             {route.page === 'compare' && <Compare meta={meta} ids={route.id} />}
             {route.page === 'screener' && <Screener meta={meta} query={route.q} onHospital={onHospital} />}

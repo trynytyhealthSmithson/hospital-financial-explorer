@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.5', date: 'November 2026', items: [
+      'Facility Network Adequacy (Medicare Advantage only): for every county, whether every Medicare-certified facility in reach would meet the CMS 2026 HSD facility standards for acute inpatient hospital beds, cardiac surgery, cardiac catheterization, critical care, outpatient surgery, skilled nursing and inpatient psychiatric services.',
+      'National and state maps by status, clickable counts that list the counties that do not meet a standard or meet it thinly, and county pages with every facility type and the facilities in reach, all downloadable.',
+    ],
+  },
+  {
     version: 'Beta 2.4', date: 'November 2026', items: [
       'Ownership changes and mergers from CMS Medicare enrollment records (2016 to 2026) on hospital profiles and system pages, with a screener filter and preset.',
       'Rural hospital closures and conversions (including Rural Emergency Hospitals) from the UNC Sheps Center: a banner on affected hospital profiles and a screener filter.',

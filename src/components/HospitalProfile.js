@@ -99,6 +99,7 @@ export default function HospitalProfile({ ccn, meta }) {
           {h.f && <a href={`${MSSP_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">ACOs in this county</a>}
           <a href={`${PHYS_URL}/#h/${ccn}`} target="_blank" rel="noreferrer">Affiliated clinicians and groups</a>
           {h.f && <a href={`${PHYS_URL}/#map/${h.f}`} target="_blank" rel="noreferrer">Physicians in this county</a>}
+          {h.f && <a href={`#adequacy/${h.f}`}>Facility adequacy in this county</a>}
           <a href={`#compare/${ccn}`}>Compare with other hospitals</a>
           <button className="cm-link" onClick={csv}>Download all years (CSV)</button>
         </div>
