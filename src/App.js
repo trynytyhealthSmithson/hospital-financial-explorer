@@ -9,6 +9,7 @@ import Methodology from './components/Methodology';
 import FacilityAdequacy from './components/FacilityAdequacy';
 import { loadMeta } from './data';
 import { DATA_RELEASE } from './content';
+import { BetaButtons } from './components/Beta';
 
 const NAV = [
   { id: 'overview', label: 'Overview', section: 'Explore' },
@@ -91,6 +92,7 @@ export default function App() {
           </div>
           <div className="topbar-links">
             <span className="topbar-badge">Beta · cost reports {meta ? `${meta.years[0]} to ${last}` : ''}</span>
+            <BetaButtons />
             <a href="#methodology">Methodology</a>
             <a href="https://www.trynytyhealth.com/tools">More TRYNYTY tools</a>
           </div>
