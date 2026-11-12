@@ -6,8 +6,8 @@ facility of each type, county by county. This tests the whole market (every faci
 
 Facility types scored (the rest of the HSD facility types need data the public files do not carry):
   040 Acute inpatient hospitals   short-term acute and critical access hospitals; the minimum is a number of BEDS
-  041 Cardiac surgery program     POS open heart surgery service provided by the hospital's staff
-  042 Cardiac catheterization     POS cardiac cath lab service by staff, or a cardiac catheterization cost center on the cost report
+  041 Cardiac surgery program     POS open heart surgery service by the hospital's staff, or Medicare discharges for cardiac valve or bypass surgery (MS-DRG 216 to 236), 2022 to 2024
+  042 Cardiac catheterization     POS cardiac cath lab service by staff, a cardiac catheterization cost center on the cost report, or Medicare discharges for PCI or cardiac cath DRGs, 2022 to 2024
   043 Critical care / ICU         ICU, CCU, burn, surgical or other special care beds on the cost report, or POS ICU service by staff
   045 Outpatient surgery          ambulatory surgical centers (iQIES POS) and hospitals with operating rooms or an outpatient surgery unit
   046 Skilled nursing facilities  facilities with Medicare SNF beds (iQIES POS)
@@ -106,6 +106,14 @@ for y in ['2022', '2023', '2024', '2025']:
         WHERE a.ws = 'A000000' AND a.col = '00000' AND upper(a.v) LIKE '%CATH%' AND n.v > 0""").fetchall():
         cath.add(ccn)
 print('cost report beds', len(beds), 'cath', len(cath))
+# Medicare inpatient discharges by hospital and MS-DRG, 2022 to 2024 (rows under 11 discharges are suppressed by CMS)
+SURG_DRG = ['216','217','218','219','220','221','228','229','231','232','233','234','235','236']
+CATH_DRG = ['246','247','248','249','250','251','273','274','286','287']
+inp = ','.join(f"'{f}'" for f in sorted(glob.glob(str(RAW / 'inpatient/MUP_INP_*_DY2[234]_PrvSvc.CSV'))))
+drg = con.execute(f"""SELECT DISTINCT lpad(Rndrng_Prvdr_CCN, 6, '0'), DRG_Cd FROM read_csv([{inp}], all_varchar=true, header=true, union_by_name=true)
+     WHERE DRG_Cd IN ({','.join(repr(d) for d in SURG_DRG + CATH_DRG)})""").fetchall()
+surg_drg = {c for c, d in drg if d in SURG_DRG}; cath_drg = {c for c, d in drg if d in CATH_DRG}
+print('inpatient DRG evidence: cardiac surgery', len(surg_drg), 'cath or PCI', len(cath_drg))
 
 pos = {r[0]: r for r in con.execute(f"""SELECT PRVDR_NUM, FAC_NAME, CITY_NAME, STATE_CD, left(ZIP_CD, 5), try_cast(BED_CNT AS INT), CRDC_CTHRTZTN_LAB_SRVC_CD, OPEN_HRT_SRGRY_SRVC_CD,
         ICU_SRVC_CD, OPRTG_ROOM_SRVC_CD, OP_SRGRY_UNIT_SRVC_CD, PSYCH_UNIT_SW, try_cast(PSYCH_UNIT_BED_CNT AS INT), PRVDR_CTGRY_SBTYP_CD
@@ -120,8 +128,8 @@ for ccn, h in H.items():
     if z not in ZC: continue
     t = []
     if h['t'] in ('STH', 'CAH'): t.append('040')
-    if h['t'] in ('STH', 'CAH') and staff(p[7]): t.append('041')
-    if h['t'] in ('STH', 'CAH') and (staff(p[6]) or ccn in cath): t.append('042')
+    if h['t'] in ('STH', 'CAH') and (staff(p[7]) or ccn in surg_drg): t.append('041')
+    if h['t'] in ('STH', 'CAH') and (staff(p[6]) or ccn in cath or ccn in cath_drg): t.append('042')
     if h['t'] in ('STH', 'CAH') and (icu.get(ccn, 0) > 0 or staff(p[8])): t.append('043')
     if h['t'] in ('STH', 'CAH') and (staff(p[9]) or staff(p[10])): t.append('045')
     if h['t'] == 'PH' or ipf.get(ccn, 0) > 0 or p[11] == 'Y': t.append('052')
