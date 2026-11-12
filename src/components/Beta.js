@@ -8,7 +8,7 @@ const TOOLS = [['ma-enrollment', 'MA Enrollment Explorer'], ['hospital-financial
 const ROLES = ['Health system or hospital', 'Health plan', 'ACO, IPA or PSHP', 'Physician group', 'Consultant or advisor', 'Investor', 'Other'];
 const TITLES = { signup: 'Join the beta', feedback: 'Send feedback', issue: 'Report a data issue' };
 const INTRO = {
-  signup: 'This explorer is free during the beta. Beta members who share feedback get 50% off their first year when it moves to paid licenses, and credit toward the TRYNYTY Market Terminal.',
+  signup: 'This tool is free during beta testing. Users who share feedback during the beta get 50% off their first year when it moves to a paid subscription in December.',
   feedback: 'What works, what is missing, what would make this worth paying for. Every note is read.',
   issue: 'Tell us what looks wrong. The page you are on is attached automatically, so we can find it.',
 };
@@ -21,7 +21,7 @@ export function BetaButtons() {
   const [open, setOpen] = useState(null);
   return (
     <>
-      <button type="button" onClick={() => setOpen('signup')} style={{ ...btn, border: 'none', background: 'var(--teal-dark)', color: '#fff' }}>Join the beta</button>
+      <button type="button" onClick={() => setOpen('signup')} style={{ ...btn, border: 'none', background: 'var(--teal-dark)', color: '#fff' }}>Give feedback, get 50% off</button>
       <button type="button" onClick={() => setOpen('issue')} style={{ ...btn, border: '1px solid var(--gray-300, #dee2e6)', background: '#fff', color: 'var(--gray-700)' }}>Report a data issue</button>
       {open && <BetaDialog kind={open} setKind={setOpen} onClose={() => setOpen(null)} />}
     </>
@@ -57,7 +57,7 @@ function BetaDialog({ kind, setKind, onClose }) {
         </div>
         {state === 'done' ? (
           <div style={{ marginTop: 12, fontSize: 14, lineHeight: 1.6, color: 'var(--gray-700)' }}>
-            <p>{kind === 'signup' ? 'You are on the beta list. We will email you before licenses go on sale, with your founding price.' : 'Thank you. We will look into it and follow up if you left an email address.'}</p>
+            <p>{kind === 'signup' ? 'You are on the beta list. We will email you before subscriptions start, with your 50% first-year price.' : 'Thank you. We will look into it and follow up if you left an email address.'}</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {kind !== 'feedback' && <button type="button" style={{ ...btn, border: '1px solid var(--gray-300, #dee2e6)', background: '#fff' }} onClick={() => { setState('idle'); setKind('feedback'); }}>Send feedback too</button>}
               <button type="button" style={{ ...btn, border: 'none', background: 'var(--teal-dark)', color: '#fff' }} onClick={onClose}>Close</button>
@@ -79,7 +79,8 @@ function BetaDialog({ kind, setKind, onClose }) {
                 <legend style={{ fontSize: 13, color: 'var(--gray-700)', marginBottom: 4 }}>Tools you are interested in</legend>
                 {TOOLS.map(([id, nm]) => <label key={id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}><input type="checkbox" checked={f.tools.includes(id)} onChange={() => toggleTool(id)} />{nm}</label>)}
               </fieldset>
-              <label style={field}>What would you use it for?<textarea style={{ ...input, minHeight: 70, resize: 'vertical' }} value={f.use_case} onChange={e => set('use_case', e.target.value)} /></label>
+              <label style={field}>What would you use it for?<textarea style={{ ...input, minHeight: 60, resize: 'vertical' }} value={f.use_case} onChange={e => set('use_case', e.target.value)} /></label>
+              <label style={field}>Feedback so far: what works, what is missing (optional; you can also send it later)<textarea style={{ ...input, minHeight: 70, resize: 'vertical' }} value={f.message} onChange={e => set('message', e.target.value)} /></label>
             </>}
             {kind !== 'signup' && <label style={field}>{kind === 'issue' ? 'What looks wrong, and what did you expect?' : 'Your feedback'}<textarea style={{ ...input, minHeight: 110, resize: 'vertical' }} value={f.message} onChange={e => set('message', e.target.value)} required /></label>}
             <label aria-hidden="true" style={{ position: 'absolute', left: -10000, width: 1, height: 1, overflow: 'hidden' }}>Website<input tabIndex={-1} autoComplete="off" value={f.website} onChange={e => set('website', e.target.value)} /></label>
