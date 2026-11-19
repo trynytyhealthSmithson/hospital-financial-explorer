@@ -67,12 +67,13 @@ function NoAccessView({ claims, recheck, checking, inOrg }) {
   const { signOut } = useClerk();
   const { have, ended } = planSummary(claims);
   const endedThis = ended[TOOL];
+  const teamPlan = inOrg && planSummary({ org_tools: claims && claims.org_tools, org_until: claims && claims.org_until }).have.length > 0;
   let title; let body;
   if (endedThis) {
     title = `Your access to the ${TOOL_NAME} ended on ${fmtDate(endedThis)}`;
     body = <p className="gate-text">Renew on the pricing page to pick up where you left off.{inOrg ? ' If your team renews, ask your team admin to let us know.' : ''}</p>;
   } else if (have.length) {
-    title = `The ${TOOL_NAME} is not part of your ${inOrg ? 'team’s ' : ''}plan`;
+    title = `The ${TOOL_NAME} is not part of your ${teamPlan ? 'team’s ' : ''}plan`;
     body = (
       <>
         <p className="gate-text">Your plan includes:</p>
