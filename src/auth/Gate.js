@@ -133,6 +133,15 @@ function Inner({ children }) {
     }
   }, [isSignedIn, sessionId, orgId, check, getToken]);
 
+  // Re-check now and then, so a plan that ends or changes takes effect without a page reload.
+  useEffect(() => {
+    if (!isSignedIn) return undefined;
+    const again = () => { if (document.visibilityState === 'visible') check(true); };
+    const timer = setInterval(again, 5 * 60 * 1000);
+    window.addEventListener('focus', again);
+    return () => { clearInterval(timer); window.removeEventListener('focus', again); };
+  }, [isSignedIn, check]);
+
   if (!isLoaded) return <Waiting />;
   if (!isSignedIn) return <SignedOutView />;
   if (state.key !== `${sessionId}|${orgId || ''}`) return <Waiting text="Checking your access…" />;
