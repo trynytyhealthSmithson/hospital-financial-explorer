@@ -15,3 +15,6 @@
 .gate-btn:disabled { opacity: .6; cursor: default; }
 .gate-user { margin-top: 10px; }
 .gate-account { display: inline-flex; align-items: center; gap: 10px; }
+.gate-have { margin: 4px 0 12px; padding-left: 18px; font-size: 14px; line-height: 1.8; }
+.gate-have a { color: var(--teal, #0f7c74); text-decoration: none; font-weight: 500; }
+.gate-beta { font-size: 13px; background: var(--gray-50, #f7f8fa); border-radius: 8px; padding: 8px 12px; }

@@ -34,3 +34,25 @@ export const decodeClaims = token => {
     return JSON.parse(decodeURIComponent(escape(s)));
   } catch (e) { return {}; }
 };
+
+// The paid tools, for the no-access screen.
+export const TOOLS = {
+  ma: { name: 'MA Enrollment Explorer', url: 'https://maenroll.trynytyhealth.com' },
+  hospital: { name: 'Hospital Financial Explorer', url: 'https://hospitals.trynytyhealth.com' },
+  physician: { name: 'Physician & Practice Explorer', url: 'https://physicians.trynytyhealth.com' },
+};
+
+// What an account holds right now, and what it held that has ended.
+export const planSummary = (claims, now = Date.now()) => {
+  const c = claims || {};
+  const have = new Set(); const ended = {};
+  [[c.tools, c.until], [c.org_tools, c.org_until]].forEach(([t, until]) => {
+    let l = list(t); if (l.includes('all')) l = Object.keys(TOOLS);
+    l.filter(k => TOOLS[k]).forEach(k => {
+      if (live(until, now)) have.add(k);
+      else if (!ended[k] || Date.parse(until) > Date.parse(ended[k])) ended[k] = until;
+    });
+  });
+  have.forEach(k => delete ended[k]);
+  return { have: [...have], ended };
+};

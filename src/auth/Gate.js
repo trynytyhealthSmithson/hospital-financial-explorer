@@ -4,7 +4,7 @@
 // every /data request so the edge middleware can check it too.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ClerkProvider, SignIn, UserButton, OrganizationSwitcher, useAuth, useClerk, useOrganizationList } from '@clerk/react';
-import { grantOf, decodeClaims } from './entitle';
+import { grantOf, decodeClaims, planSummary, TOOLS } from './entitle';
 import { TOOL, TOOL_NAME } from './tool';
 import './gate.css';
 
@@ -60,17 +60,41 @@ function SignedOutView() {
   );
 }
 
-function NoAccessView({ recheck, checking, inOrg }) {
+const fmtDate = d => { const t = Date.parse(d); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); };
+const pricingFor = anchor => `${PRICING}?tool=${TOOL}#${anchor}`;
+
+function NoAccessView({ claims, recheck, checking, inOrg }) {
   const { signOut } = useClerk();
+  const { have, ended } = planSummary(claims);
+  const endedThis = ended[TOOL];
+  let title; let body;
+  if (endedThis) {
+    title = `Your access to the ${TOOL_NAME} ended on ${fmtDate(endedThis)}`;
+    body = <p className="gate-text">Renew on the pricing page to pick up where you left off.{inOrg ? ' If your team renews, ask your team admin to let us know.' : ''}</p>;
+  } else if (have.length) {
+    title = `The ${TOOL_NAME} is not part of your ${inOrg ? 'team’s ' : ''}plan`;
+    body = (
+      <>
+        <p className="gate-text">Your plan includes:</p>
+        <ul className="gate-have">{have.map(k => <li key={k}><a href={TOOLS[k].url}>{TOOLS[k].name} →</a></li>)}</ul>
+        <p className="gate-text">
+          Add the {TOOL_NAME} on its own, or move to the plan with all three explorers, which covers them all in one annual subscription.
+        </p>
+      </>
+    );
+  } else {
+    title = `Your account does not include the ${TOOL_NAME} yet`;
+    body = <p className="gate-text">{inOrg ? 'Your team’s plan does not cover this tool. ' : ''}Plans are annual, for one person or a team of up to five, with one explorer or all three.</p>;
+  }
   return (
     <Shell>
-      <h1 className="gate-title">Your account does not include the {TOOL_NAME} yet</h1>
-      <p className="gate-text">
-        {inOrg ? 'Your team’s plan does not cover this tool, or it has ended. ' : ''}
-        Plans are annual, for one person or a team of up to five. During the beta testing period, licenses are 50% off the first year for testers who send feedback through the app.
-      </p>
+      <h1 className="gate-title">{title}</h1>
+      {body}
+      <p className="gate-text gate-beta">Beta testing period: 50% off the first year for testers who send feedback through the app.</p>
       <div className="gate-actions">
-        <a className="gate-btn primary" href={PRICING}>See pricing</a>
+        {have.length && !endedThis
+          ? <><a className="gate-btn primary" href={pricingFor('all-three')}>See the all-three plan</a><a className="gate-btn" href={pricingFor('one-explorer')}>Add this tool only</a></>
+          : <a className="gate-btn primary" href={pricingFor('plans')}>{endedThis ? 'Renew' : 'See pricing'}</a>}
         <button className="gate-btn" onClick={recheck} disabled={checking}>{checking ? 'Checking…' : 'I just got access, check again'}</button>
         <button className="gate-btn link" onClick={() => signOut()}>Sign out</button>
       </div>
@@ -82,7 +106,7 @@ function NoAccessView({ recheck, checking, inOrg }) {
 function Inner({ children }) {
   const { isLoaded, isSignedIn, sessionId, orgId, getToken } = useAuth();
   const { setActive, userMemberships, isLoaded: orgsLoaded } = useOrganizationList({ userMemberships: true });
-  const [state, setState] = useState({ key: null, grant: null });
+  const [state, setState] = useState({ key: null, grant: null, claims: {} });
   const [checking, setChecking] = useState(false);
   const claimed = useRef(null);
   tokenGetter.fn = isSignedIn ? () => getToken() : null;
@@ -95,7 +119,8 @@ function Inner({ children }) {
 
   const check = useCallback(async fresh => {
     const token = await getToken(fresh ? { skipCache: true } : undefined).catch(() => null);
-    setState({ key: `${sessionId}|${orgId || ''}`, grant: token ? grantOf(decodeClaims(token), TOOL) : null });
+    const claims = token ? decodeClaims(token) : {};
+    setState({ key: `${sessionId}|${orgId || ''}`, grant: grantOf(claims, TOOL), claims });
   }, [getToken, sessionId, orgId]);
 
   useEffect(() => {
@@ -111,7 +136,7 @@ function Inner({ children }) {
   if (!isLoaded) return <Waiting />;
   if (!isSignedIn) return <SignedOutView />;
   if (state.key !== `${sessionId}|${orgId || ''}`) return <Waiting text="Checking your access…" />;
-  if (!state.grant) return <NoAccessView inOrg={!!orgId} checking={checking} recheck={async () => { setChecking(true); await check(true); setChecking(false); }} />;
+  if (!state.grant) return <NoAccessView claims={state.claims} inOrg={!!orgId} checking={checking} recheck={async () => { setChecking(true); await check(true); setChecking(false); }} />;
   return children;
 }
 
