@@ -124,9 +124,16 @@ export default function Gate({ children }) {
 // Account menu for the top bar: renders nothing when sign-in is off.
 export function AccountButton() {
   if (!AUTH_ON) return null;
+  return <AccountMenu />;
+}
+
+// The team picker only shows for people who belong to a team.
+function AccountMenu() {
+  const { userMemberships } = useOrganizationList({ userMemberships: true });
+  const teams = (userMemberships && userMemberships.count) || 0;
   return (
     <span className="gate-account">
-      <OrganizationSwitcher />
+      {teams > 0 && <OrganizationSwitcher hidePersonal={teams > 0} />}
       <UserButton />
     </span>
   );
