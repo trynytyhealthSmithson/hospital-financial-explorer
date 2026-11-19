@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadOwnership, loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER } from '../data';
+import { loadOwnership, loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER, sysCash } from '../data';
 
 const REGION = {
   Northeast: ['CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA'],
@@ -68,7 +68,8 @@ export default function Screener({ meta, query, onHospital }) {
       if (F.chow === '1' && !ow.length) return;
       if (F.closed === '1' && !cl) return; if (F.closed === '0' && cl) return;
       const p = Y3 && Y3.byIdx.get(i);
-      const x = { ...r, h, mcr: r.days ? r.mcr_days / r.days : null, mcd: r.days ? r.mcd_days / r.days : null,
+      const dsys = sysCash(h, r.dcoh);
+      const x = { ...r, h, dsys, dcoh: dsys ? null : r.dcoh, mcr: r.days ? r.mcr_days / r.days : null, mcd: r.days ? r.mcd_days / r.days : null,
         dtm: p && !p.flag && !r.flag && p.tm != null && r.tm != null ? r.tm - p.tm : null, mall: hx ? hx[0] : null, mapen: hx && hx[1] ? hx[4] : null, mmm: hx && hx[6] != null ? hx[6] : null, in340, cp340: in340 ? b3[4] : null, aco: ac ? ac.map(x => x[1]).join('; ') : '', chow: ow.length ? ow[0][0] : '', closed: cl ? cl[0] : '', cmi: ip.cmi ?? null, hrrp: ip.hrrp_f != null ? (1 - ip.hrrp_f) : null, star: qq.star ?? null, tps: qq.tps ?? null, err_hi: qq.err_hi ?? null, hacpen: qq.hacpen ?? null };
       for (const [k] of RANGES) {
         const lo = F[k + '_min'], hi = F[k + '_max']; if ((lo == null || lo === '') && (hi == null || hi === '')) continue;
@@ -132,8 +133,9 @@ export default function Screener({ meta, query, onHospital }) {
               <td className="n">{fmtInt(r.beds)}</td><td className="n">{fmtUsdM(r.npr)}</td>
               <td className="n" style={{ color: r.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(r.tm)}</td>
               <td className="n" style={{ color: r.dtm > 0 ? 'var(--teal-dark)' : r.dtm < 0 ? 'var(--red)' : undefined }}>{r.dtm == null ? 'n/a' : `${r.dtm > 0 ? '+' : r.dtm < 0 ? '−' : ''}${Math.abs(r.dtm * 100).toFixed(1)} pts`}</td>
-              <td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td><td className="n">{fmtPct(r.occ, 0)}</td><td className="n">{fmtPct(r.mall, 0)}</td><td className="n">{r.mapen == null ? '' : fmtPct(r.mapen, 0)}</td><td className="n">{r.cmi != null ? r.cmi.toFixed(2) : ''}</td><td className="n">{r.star ?? ''}</td>
+              <td className="n">{fmtPct(r.pm)}</td><td className="n">{r.dsys ? <span title="A system hospital reporting under 10 days of cash; the system usually holds the cash">At system</span> : r.dcoh == null ? 'n/a' : Math.round(r.dcoh)}</td><td className="n">{fmtPct(r.occ, 0)}</td><td className="n">{fmtPct(r.mall, 0)}</td><td className="n">{r.mapen == null ? '' : fmtPct(r.mapen, 0)}</td><td className="n">{r.cmi != null ? r.cmi.toFixed(2) : ''}</td><td className="n">{r.star ?? ''}</td>
               <td>{meta.ftype[r.h.t]}</td></tr>)}</tbody></table>
+          <p className="cm-note">Years are CMS file years: a 2024 report is one whose fiscal year began between October 2023 and September 2024, so it can end as late as mid-2025. Hospitals in a health system that report under 10 days of cash show &ldquo;At system&rdquo; and are left out of cash filters, because the system usually holds the cash.</p>
           {rows.length > 500 && <p className="cm-note">Showing 500 of {fmtInt(rows.length)}. Add filters, or download the CSV for all of them.</p>}
         </div>
       </ChartCard>

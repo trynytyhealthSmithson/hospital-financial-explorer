@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import ChartCard from './ChartCard';
 import { titleCase, countyTitle } from './HospitalMap';
-import { fmtAdj, loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM } from '../data';
+import { fmtAdj, loadAco, MSSP_URL, load340b, loadOpIdx, loadHcrisIdx, loadIpps, loadQuality, loadGeo, loadHospitals, loadState, loadPeers, loadMarketsMeta, loadMkt, loadSA, loadSL, loadZips, fmtInt, fmtPct, fmtUsd, fmtUsdM, sysCash, SYS_CASH, fyEnd } from '../data';
 
 const COLORS = ['#178a84', '#0b1829', '#d4860a', '#b4471f', '#6c5ce7'];
 const MAX = 5;
@@ -90,11 +90,12 @@ export default function Compare({ meta, ids }) {
         <ChartCard title={`Side by side, ${year}`} sub={`Peer median is for ${peerLabel} hospitals (the first hospital's peer group). The strongest value in each favorable-direction row is in bold. Grey values come from reports flagged as unusable.`}
           csvName={`compare-${year}`} csv={() => [['measure', ...hs.map(nm), `peer median (${peerLabel})`], ...ROWS.filter(r => r.length > 1).map(([k, l, f]) => [l, ...hs.map(h => { const d = rec(h.c); return d ? f(d) : ''; }), peer && peer[k] ? peer[k][1] : '']), ...(hx ? HROWS.map(([l, i]) => [l, ...hs.map(h => (hx[h.c] ? hx[h.c][i] ?? '' : '')), '']) : [])]}>
           <div style={{ overflow: 'auto' }}><table className="cm-table"><thead><tr><th>Measure</th>{hs.map((h, i) => <th key={h.c} className="n" style={{ color: COLORS[i], minWidth: 120 }}><a href={`#h/${h.c}`} style={{ color: 'inherit' }}>{nm(h)}</a></th>)}<th className="n">Peer median</th></tr></thead>
-            <tbody>{ROWS.map(r => { if (r.length === 1) return <tr key={r[0]} className="sub"><td colSpan={hs.length + 2}>{r[0]}</td></tr>;
-              const [k, l, f, fmt, better] = r; const vals = hs.map(h => { const d = rec(h.c); return d ? f(d) : null; });
+            <tbody><tr><td className="lab">Fiscal year ending</td>{hs.map(h => <td key={h.c} className="n" style={{ fontSize: 12 }}>{rec(h.c) ? fyEnd(rec(h.c)) : ''}</td>)}<td /></tr>
+              {ROWS.map(r => { if (r.length === 1) return <tr key={r[0]} className="sub"><td colSpan={hs.length + 2}>{r[0]}</td></tr>;
+              const [k, l, f, fmt, better] = r; const vals = hs.map(h => { const d = rec(h.c); const v = d ? f(d) : null; return k === 'dcoh' && sysCash(h, v) ? null : v; });
               const ok = vals.filter(v => v != null); const best = better && ok.length > 1 ? (better > 0 ? Math.max(...ok) : Math.min(...ok)) : null;
               return <tr key={k}><td className="lab">{l}</td>{hs.map((h, i) => { const d = rec(h.c); const flag = d && (d.q || []).some(x => x[0] !== '~');
-                return <td key={h.c} className="n" style={{ fontWeight: vals[i] != null && vals[i] === best ? 700 : undefined, color: flag ? 'var(--gray-500)' : undefined }}>{d ? fmt(vals[i]) : 'no report'}</td>; })}
+                return <td key={h.c} className="n" style={{ fontWeight: vals[i] != null && vals[i] === best ? 700 : undefined, color: flag ? 'var(--gray-500)' : undefined }}>{d ? (k === 'dcoh' && sysCash(h, f(d), d) ? SYS_CASH : fmt(vals[i])) : 'no report'}</td>; })}
                 <td className="n" style={{ color: 'var(--gray-600)' }}>{peer && peer[k] ? fmt(peer[k][1]) : ''}</td></tr>; })}
               {QD && <><tr className="sub"><td colSpan={hs.length + 2}>Quality and penalties, FY {QD.meta.fy}</td></tr>
                 {QROWS.map(([l, f]) => <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{QD.h[h.c] ? f(QD.h[h.c]) : 'not rated'}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{l.startsWith('Value') ? `${QD.meta.tps_pct[10]} (national)` : ''}</td></tr>)}</>}

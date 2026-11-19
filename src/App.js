@@ -17,7 +17,7 @@ const NAV = [
   { id: 'screener', label: 'Hospital Screener', section: 'Explore' },
   { id: 'compare', label: 'Compare Hospitals', section: 'Explore' },
   { id: 'systems', label: 'Health Systems', section: 'Explore' },
-  { id: 'adequacy', label: 'Facility Adequacy', section: 'Explore' },
+  { id: 'adequacy', label: 'Facility Market View', section: 'Explore' },
   { id: 'methodology', label: 'Methodology', section: 'Reference' },
 ];
 const PAGE_TITLES = { overview: 'Overview', map: 'Hospital Map', screener: 'Hospital Screener', compare: 'Compare Hospitals', systems: 'Health Systems', adequacy: 'Facility Network Adequacy', sys: 'Health System', h: 'Hospital Profile', methodology: 'Methodology' };

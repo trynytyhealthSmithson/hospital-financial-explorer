@@ -7,7 +7,7 @@ import { BASE, loadGeo, fmtInt, fmtPct, FIPS_ST, ST_FIPS, PHYS_URL, NODATA } fro
 const cache = {};
 const get = u => (cache[u] = cache[u] || fetch(`${BASE}/${u}`).then(r => { if (!r.ok) throw new Error(u); return r.json(); }));
 const COL = { F: '#c0392b', T: '#e6a23c', P: '#2fa59f', '-': NODATA };
-const LABEL = { F: 'Does not meet', T: 'Meets thinly', P: 'Meets', '-': 'Not scored' };
+const LABEL = { F: 'Short', T: 'Thin', P: 'Covered', '-': 'Not scored' };
 const KIND = { hospital: 'Hospital', asc: 'Ambulatory surgical center', snf: 'Skilled nursing facility' };
 const status = v => { if (!v) return '-'; const [cov, n, mn] = v; if (cov < 0.9 || (mn != null && n < mn)) return 'F'; if (cov < 0.95 || (mn != null && n < 2 * mn)) return 'T'; return 'P'; };
 const Loading = () => <div style={{ padding: 60, textAlign: 'center', color: 'var(--gray-500)' }}>Loading…</div>;
@@ -51,18 +51,18 @@ export default function FacilityAdequacy({ route }) {
         <label className="cm-field">State
           <select value={stAbbr} onChange={e => go(`#adequacy/${e.target.value}`)}><option value="">All states</option>{Object.keys(ST_FIPS).filter(a => geo.states.some(s => s.id === ST_FIPS[a])).sort().map(a => <option key={a} value={a}>{a}</option>)}</select></label>
         <div style={{ fontSize: 13, flex: '1 1 380px' }}>
-          <button className="cm-link" style={{ color: COL.F, fontWeight: 700 }} onClick={() => openList(type, 'F')}>{fmtInt(cur.F)}</button> counties {stAbbr ? `in ${sname(stFips)} ` : ''}do not meet the {tname(type)} standard, <button className="cm-link" style={{ color: '#b07a1f', fontWeight: 700 }} onClick={() => openList(type, 'T')}>{fmtInt(cur.T)}</button> meet it thinly and {fmtInt(cur.P)} meet it, counting every Medicare-certified facility. <button className="cm-link" onClick={() => openList(type, 'FT')}>See them as a list</button>
+          <button className="cm-link" style={{ color: COL.F, fontWeight: 700 }} onClick={() => openList(type, 'F')}>{fmtInt(cur.F)}</button> counties {stAbbr ? `in ${sname(stFips)} ` : ''}are short on {tname(type)}, <button className="cm-link" style={{ color: '#b07a1f', fontWeight: 700 }} onClick={() => openList(type, 'T')}>{fmtInt(cur.T)}</button> are thin and {fmtInt(cur.P)} are covered, counting every Medicare-certified facility. <button className="cm-link" onClick={() => openList(type, 'FT')}>See them as a list</button>
         </div>
       </div>
-      <div className="na-banner" style={{ marginBottom: 14 }}>Medicare Advantage facility standards only (CMS 2026 HSD Reference File). This tests the market, not a plan&apos;s network: could a plan contract with enough facilities here? Distance is straight-line from Census tract population centers to facility ZIP code centers, not drive time. Clinician standards are in the <a href={`${PHYS_URL}/#adequacy${county ? '/' + county : stAbbr ? '/' + stAbbr : ''}`} target="_blank" rel="noreferrer">Physician &amp; Practice Explorer</a>.</div>
+      <div className="na-banner" style={{ marginBottom: 14 }}><b>Directional market view.</b> Uses the CMS Medicare Advantage facility minimums and distances (2026 HSD Reference File) as a yardstick for 7 of the 14 facility types; it is not a CMS network adequacy determination. It looks at the market, not a plan&apos;s network: could a plan contract with enough facilities here? Distance is straight-line from Census tract population centers to facility ZIP code centers, not drive time. Clinician standards are in the <a href={`${PHYS_URL}/#adequacy${county ? '/' + county : stAbbr ? '/' + stAbbr : ''}`} target="_blank" rel="noreferrer">Physician &amp; Practice Explorer</a>.</div>
       <div className="cm-grid">
-        <ChartCard title={`${tname(type)}: can the market meet the standard? ${stAbbr ? sname(stFips) : 'United States'}`} sub="Counties by whether every Medicare-certified facility of this type in reach would meet the minimum number and maximum distance. Click a state, then a county.">
+        <ChartCard title={`${tname(type)}: is the market covered? ${stAbbr ? sname(stFips) : 'United States'}`} sub="Counties by whether every Medicare-certified facility of this type in reach clears the CMS minimum number and maximum distance. Short: under 90% of residents covered or below the minimum. Thin, a TRYNYTY flag: under 95% or below twice the minimum. Click a state, then a county.">
           <UsMap ref={mapRef} geo={geo} mode={stFips ? 'states' : 'counties'} focusState={stFips} counties={countyIds} selected={county}
             stateFill={() => '#f3f5f8'} countyFill={f => COL[S[f] ? S[f][ti] : '-']}
             onState={sf => go(sf ? `#adequacy/${FIPS_ST[sf]}` : '#adequacy')} onCounty={f => go(`#adequacy/${f}`)} tip={tip}
             legend={<div className="cm-legend" style={{ display: 'flex', gap: 14, fontSize: 12, marginTop: 6 }}>{['F', 'T', 'P', '-'].map(k => <span key={k}><i style={{ display: 'inline-block', width: 10, height: 10, background: COL[k], marginRight: 5, borderRadius: 2 }} />{LABEL[k]}</span>)}</div>} />
         </ChartCard>
-        <ChartCard title={`Every facility type, ${stAbbr ? sname(stFips) : 'United States'}`} sub="Counties that do not meet each standard, or meet it thinly. Click a count to list them.">
+        <ChartCard title={`Every facility type, ${stAbbr ? sname(stFips) : 'United States'}`} sub="Counties that are short or thin on each facility type. Click a count to list them.">
           <table className="cm-table"><thead><tr><th>Facility type</th><th className="n">Facilities</th><th className="n">Do not meet</th><th className="n">Thin</th></tr></thead>
             <tbody>{M.types.map(t => { const o = agg(t[0]); return <tr key={t[0]} className={t[0] === type ? 'on' : ''}><td><button className="cm-link" onClick={() => setType(t[0])}>{t[1]}</button></td>
               <td className="n">{fmtInt(M.counts[t[0]])}</td>
@@ -87,7 +87,7 @@ function CountyPanel({ f, c, type, setType, M, geo, FAC, tname, unit }) {
   return (<>
     <ChartCard style={{ marginTop: 14 }} title={`${countyTitle(geo, f)}: facility standards`} sub={`${c.des} county · ${fmtInt(c.b)} Medicare beneficiaries (HSD reference). Coverage is the share of residents within the maximum distance of at least one facility; the count is every facility of the type within that distance of some part of the county.`}
       headerRight={<a className="cm-link" href={`${PHYS_URL}/#adequacy/${f}`} target="_blank" rel="noreferrer">Clinician standards for this county</a>}
-      csvName={`facility-adequacy-${f}`} csv={() => [['facility_type_code', 'facility_type', 'status', 'residents_covered', 'in_reach', 'unit', 'minimum', 'max_miles'],
+      csvName={`facility-market-${f}`} csv={() => [['facility_type_code', 'facility_type', 'status', 'residents_covered', 'in_reach', 'unit', 'minimum', 'max_miles'],
         ...M.types.map(t => { const x = c.s[t[0]]; return x ? [t[0], t[1], LABEL[status(x)], x[0], x[1], t[2], x[2] ?? '', x[3]] : [t[0], t[1], 'Not scored', '', '', t[2], '', '']; })]}>
       <div className="tbl-scroll"><table className="cm-table"><thead><tr><th>Facility type</th><th>Status</th><th className="n">Residents covered</th><th className="n">In reach</th><th className="n">Minimum</th><th className="n">Max miles</th></tr></thead>
         <tbody>{M.types.map(t => { const x = c.s[t[0]], s = status(x); return <tr key={t[0]} className={t[0] === type ? 'on' : ''} style={{ cursor: 'pointer' }} onClick={() => setType(t[0])}>
@@ -124,15 +124,15 @@ function IssuesCard({ list, setList, type, setType, M, geo, S, stFips, stAbbr, t
   }, [fips, list, type, codes]);
   const SORTS = { cov: (a, b) => a.cov - b.cov || a.n - b.n, b: (a, b) => (b.b || 0) - (a.b || 0), county: (a, b) => countyTitle(geo, a.f).localeCompare(countyTitle(geo, b.f)) };
   const sorted = (rows || []).slice().sort((a, b) => (a.k === b.k ? 0 : a.k === 'F' ? -1 : 1) || SORTS[sort](a, b));
-  const std = list.all ? 'the facility standards' : `the ${tname(type)} standard`, it = list.all ? 'them' : 'it';
-  const what = list.kind === 'F' ? `do not meet ${std}` : list.kind === 'T' ? `meet ${std} thinly` : `do not meet ${std} or meet ${it} thinly`;
+  const std = list.all ? 'at least one facility type' : tname(type);
+  const what = list.kind === 'F' ? `are short on ${std}` : list.kind === 'T' ? `are thin on ${std}` : `are short or thin on ${std}`;
   const chip = (on, label, fn) => <button className={`cm-chip ${on ? 'on' : ''}`} onClick={fn}>{label}</button>;
   const th = (k, label, cls) => <th className={cls} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => setSort(k)}>{label}{sort === k ? ' ▾' : ''}</th>;
   return (
     <ChartCard style={{ marginTop: 14 }} title={rows ? `${fmtInt(sorted.length)} ${list.all ? 'county and facility type combinations' : sorted.length === 1 ? 'county' : 'counties'} in ${stAbbr ? geo.states.find(s => s.id === stFips)?.name : 'the United States'} ${what}` : 'Loading counties…'}
       sub="Click a county to see every facility type and the facilities in reach."
       headerRight={<button className="cm-chip" onClick={() => setList(null)}>Close list</button>}
-      csvName={`facility-adequacy-issues-${list.all ? 'all' : type}-${stAbbr || 'us'}`}
+      csvName={`facility-market-gaps-${list.all ? 'all' : type}-${stAbbr || 'us'}`}
       csv={() => [['county_fips', 'county', 'designation', 'facility_type_code', 'facility_type', 'status', 'residents_covered', 'in_reach', 'unit', 'minimum', 'max_miles', 'beneficiaries'],
         ...sorted.map(r => [r.f, countyTitle(geo, r.f), r.des, r.code, tname(r.code), LABEL[r.k], r.cov, r.n, unit(r.code), r.min ?? '', r.mi, r.b ?? ''])]}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
