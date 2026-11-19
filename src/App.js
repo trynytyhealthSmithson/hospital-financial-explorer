@@ -10,6 +10,7 @@ import FacilityAdequacy from './components/FacilityAdequacy';
 import { loadMeta } from './data';
 import { DATA_RELEASE } from './content';
 import { BetaButtons } from './components/Beta';
+import { AccountButton } from './auth/Gate';
 
 const NAV = [
   { id: 'overview', label: 'Overview', section: 'Explore' },
@@ -95,6 +96,7 @@ export default function App() {
             <BetaButtons />
             <a href="#methodology">Methodology</a>
             <a href="https://www.trynytyhealth.com/tools">More TRYNYTY tools</a>
+            <AccountButton />
           </div>
         </div>
         <div className="page-content">
