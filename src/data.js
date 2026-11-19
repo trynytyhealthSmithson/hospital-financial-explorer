@@ -106,6 +106,14 @@ export const FTYPE_ORDER = ['STH', 'CAH', 'CH', 'PH', 'RH', 'LTCH', 'OTH'];
 export const fmtUsd = v => v == null || !isFinite(v) ? 'n/a' : (v < 0 ? '−' : '') + '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
 export const fmtUsdM = v => v == null || !isFinite(v) ? 'n/a' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e12 ? (Math.abs(v) / 1e12).toFixed(2) + 'T' : Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(2) + 'B' : (Math.abs(v) / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1) + 'M');
 export const fmtDays = v => v == null || !isFinite(v) ? 'n/a' : Math.round(v).toLocaleString('en-US') + ' days';
+// A hospital in a health system that reports under 10 days of cash almost always has its cash held by the system
+// rec (optional): the year's report; a system hospital that reports no cash, or negative or implausible cash, also counts
+export const sysCash = (h, v, rec) => !!(h && h.sy && ((v != null && isFinite(v) && v < 10) ||
+  (v == null && rec && ((rec.q || []).includes('~cash') || (rec.cash == null && rec.tinv == null && rec.inv == null && rec.npr)))));
+export const SYS_CASH = 'Held at system';
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// Fiscal year end of a report, e.g. 'Jun 2025' (CMS files a report under the year its fiscal year begins)
+export const fyEnd = rec => (rec && rec.end ? `${MON[+rec.end.slice(5, 7) - 1]} ${rec.end.slice(0, 4)}` : '');
 export const median = a => { const s = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); if (!s.length) return null; const m = s.length / 2; return s.length % 2 ? s[Math.floor(m)] : (s[m - 1] + s[m]) / 2; };
 const sum = (L, k) => L.reduce((t, r) => t + (r[k] || 0), 0);
 
