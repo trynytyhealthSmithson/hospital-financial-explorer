@@ -11,6 +11,7 @@ import { loadMeta } from './data';
 import { DATA_RELEASE } from './content';
 import { BetaButtons } from './components/Beta';
 import { AccountButton } from './auth/Gate';
+import LaunchBanner from './components/LaunchBanner';
 
 const NAV = [
   { id: 'overview', label: 'Overview', section: 'Explore' },
@@ -83,6 +84,7 @@ export default function App() {
       <div className={`mobile-overlay ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
       <div className={`mobile-drawer ${drawerOpen ? 'open' : ''}`}><Brand /><div className="sidebar-app">{APP}</div>{nav}</div>
       <div className="main-area">
+        <LaunchBanner />
         <div className="topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="hamburger-btn" onClick={() => setDrawerOpen(o => !o)} aria-label="Menu"
