@@ -6,10 +6,12 @@ import { TOOL_NAME } from '../auth/tool';
 
 const WHEN = process.env.REACT_APP_LAUNCH_DATE ? `on ${process.env.REACT_APP_LAUNCH_DATE}` : 'in December';
 const KEY = 'ty_launch_banner_closed';
+// Previews have sign-in on, so ?banner=1 shows the notice there for review.
+const FORCE = typeof window !== 'undefined' && /[?&]banner=1/.test(window.location.search);
 
 export default function LaunchBanner() {
   const [closed, setClosed] = useState(() => { try { return sessionStorage.getItem(KEY) === '1'; } catch (e) { return false; } });
-  if (AUTH_ON || closed) return null;
+  if ((AUTH_ON && !FORCE) || closed) return null;
   const close = () => { try { sessionStorage.setItem(KEY, '1'); } catch (e) { /* private mode */ } setClosed(true); };
   return (
     <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '9px 28px', background: 'var(--navy, #0B1829)', color: '#fff', fontSize: 13.5, lineHeight: 1.5 }}>
