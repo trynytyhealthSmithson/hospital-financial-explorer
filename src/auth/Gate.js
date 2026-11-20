@@ -4,7 +4,7 @@
 // every /data request so the edge middleware can check it too.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ClerkProvider, SignIn, UserButton, OrganizationSwitcher, useAuth, useClerk, useOrganizationList } from '@clerk/react';
-import { grantOf, decodeClaims, planSummary, TOOLS } from './entitle';
+import { grantOf, decodeClaims, planSummary, orgDomainOk, TOOLS } from './entitle';
 import { TOOL, TOOL_NAME } from './tool';
 import './gate.css';
 
@@ -84,7 +84,11 @@ function NoAccessView({ claims, recheck, checking, inOrg }) {
   const endedThis = ended[TOOL];
   const teamPlan = inOrg && planSummary({ org_tools: claims && claims.org_tools, org_until: claims && claims.org_until }).have.length > 0;
   let title; let body;
-  if (endedThis) {
+  const doms = [].concat((claims && claims.org_domains) || []).filter(Boolean);
+  if (inOrg && !orgDomainOk(claims)) {
+    title = `Your team’s plan covers ${doms.map(d => `@${d}`).join(' or ')} email addresses`;
+    body = <p className="gate-text">Sign in with your work email to use your team’s plan, or ask your team admin to contact us if you work with the team from another organization.</p>;
+  } else if (endedThis) {
     title = `Your access to the ${TOOL_NAME} ended on ${fmtDate(endedThis)}`;
     body = <p className="gate-text">Renew on the pricing page to pick up where you left off.{inOrg ? ' If your team renews, ask your team admin to let us know.' : ''}</p>;
   } else if (have.length) {

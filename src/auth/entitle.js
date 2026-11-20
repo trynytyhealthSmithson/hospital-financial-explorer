@@ -6,7 +6,8 @@
 //   team license:   organization metadata { "tools": [...], "until": "..." }  (members get it while that organization is active)
 // Session token claims (Clerk > Configure > Sessions > Customize session token):
 //   { "tools": "{{user.public_metadata.tools}}", "until": "{{user.public_metadata.until}}",
-//     "org_tools": "{{org.public_metadata.tools}}", "org_until": "{{org.public_metadata.until}}" }
+//     "org_tools": "{{org.public_metadata.tools}}", "org_until": "{{org.public_metadata.until}}",
+//     "email": "{{user.primary_email_address}}", "org_domains": "{{org.public_metadata.team_domains}}" }
 // "all" in tools grants every paid tool. A missing "until" means no end date.
 
 const list = v => {
@@ -19,11 +20,21 @@ const list = v => {
 };
 const live = (until, now) => !until || until === 'null' || !(Date.parse(until) <= now);
 
+// A team plan covers people whose email is on one of the team's domains, when the team lists any
+// (claims "email" and "org_domains"; teams with no list, such as ones set up by hand, cover everyone).
+export const orgDomainOk = claims => {
+  const c = claims || {};
+  const doms = list(c.org_domains).map(d => String(d).toLowerCase()).filter(Boolean);
+  if (!doms.length) return true;
+  const d = String(c.email || '').toLowerCase().split('@')[1] || '';
+  return doms.includes(d);
+};
+
 export const grantOf = (claims, tool, now = Date.now()) => {
   const c = claims || {};
   const has = t => { const l = list(t); return l.includes(tool) || l.includes('all'); };
   if (has(c.tools) && live(c.until, now)) return 'user';
-  if (has(c.org_tools) && live(c.org_until, now)) return 'org';
+  if (has(c.org_tools) && live(c.org_until, now) && orgDomainOk(c)) return 'org';
   return null;
 };
 
@@ -46,7 +57,7 @@ export const TOOLS = {
 export const planSummary = (claims, now = Date.now()) => {
   const c = claims || {};
   const have = new Set(); const ended = {};
-  [[c.tools, c.until], [c.org_tools, c.org_until]].forEach(([t, until]) => {
+  [[c.tools, c.until], [orgDomainOk(c) ? c.org_tools : null, c.org_until]].forEach(([t, until]) => {
     let l = list(t); if (l.includes('all')) l = Object.keys(TOOLS);
     l.filter(k => TOOLS[k]).forEach(k => {
       if (live(until, now)) have.add(k);
