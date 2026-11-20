@@ -12,6 +12,21 @@ const PK = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 export const AUTH_ON = !!PK;
 const PRICING = 'https://www.trynytyhealth.com/pricing';
 const FREE = 'https://www.trynytyhealth.com/tools';
+const ACCOUNT = process.env.REACT_APP_ACCOUNT_URL || 'https://www.trynytyhealth.com/account';
+
+const CardIcon = () => (
+  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" /><path d="M1.5 6.5h13" />
+  </svg>
+);
+// The Clerk account menu, plus a link to the plan and billing page on the website.
+const AccountUserButton = () => (
+  <UserButton>
+    <UserButton.MenuItems>
+      <UserButton.Link label="Plan and billing" labelIcon={<CardIcon />} href={ACCOUNT} />
+    </UserButton.MenuItems>
+  </UserButton>
+);
 
 // Add the sign-in token to same-site /data requests. Installed once; reads the current getter.
 const tokenGetter = { fn: null };
@@ -99,7 +114,7 @@ function NoAccessView({ claims, recheck, checking, inOrg }) {
         <button className="gate-btn" onClick={recheck} disabled={checking}>{checking ? 'Checking…' : 'I just got access, check again'}</button>
         <button className="gate-btn link" onClick={() => signOut()}>Sign out</button>
       </div>
-      <div className="gate-user"><UserButton /></div>
+      <div className="gate-user"><AccountUserButton /></div>
     </Shell>
   );
 }
@@ -169,7 +184,7 @@ function AccountMenu() {
   return (
     <span className="gate-account">
       {teams > 0 && <OrganizationSwitcher hidePersonal={teams > 0} />}
-      <UserButton />
+      <AccountUserButton />
     </span>
   );
 }
