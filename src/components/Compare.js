@@ -109,7 +109,7 @@ export default function Compare({ meta, ids }) {
                 {[['340B status', r => (r[2] ? `${B3.meta.types[r[0]]} since ${r[1].slice(0, 4)}` : 'Not participating')], ['340B child sites', r => (r[2] ? fmtInt(r[3]) : '')], ['340B contract pharmacies', r => (r[2] ? fmtInt(r[4]) : '')]].map(([l, f]) =>
                   <tr key={l}><td className="lab">{l}</td>{hs.map(h => <td key={h.c} className="n">{B3.h[h.c] ? f(B3.h[h.c]) : (l === '340B status' ? 'Never registered' : '')}</td>)}<td className="n" style={{ color: 'var(--gray-600)' }}>{l.includes('pharmacies') ? `${B3.meta.cp_median} (median participant)` : ''}</td></tr>)}</>}
               {AC && <><tr className="sub"><td colSpan={hs.length + 2}>Medicare Shared Savings Program, {AC.meta.latest} (matched by name)</td></tr>
-                <tr><td className="lab">MSSP ACO</td>{hs.map(h => { const a = AC.h[h.c] && AC.h[h.c][String(AC.meta.latest)]; return <td key={h.c} className="n">{a ? a.map(x => <div key={x[0]}><a href={`${MSSP_URL}/#aco/${x[0]}`} target="_blank" rel="noreferrer">{x[1]}</a></div>) : 'Not found'}</td>; })}<td></td></tr></>}</tbody></table></div>
+                <tr><td className="lab">MSSP ACO, program year {AC.meta.latest}</td>{hs.map(h => { const a = AC.h[h.c] && AC.h[h.c][String(AC.meta.latest)]; return <td key={h.c} className="n">{a ? a.map(x => <div key={x[0]}><a href={`${MSSP_URL}/#aco/${x[0]}`} target="_blank" rel="noreferrer">{x[1]}</a></div>) : 'Not found'}</td>; })}<td></td></tr></>}</tbody></table></div>
         </ChartCard>
 
         <ChartCard title={`${TREND[tk][0]}, ${meta.years[0]} to ${meta.years[meta.years.length - 1]}`} style={{ marginTop: 14 }} filename={`compare-trend-${tk}`}

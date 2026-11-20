@@ -33,7 +33,7 @@ export default function Overview({ meta, setPage }) {
         </p>
       </div>
       <div className="hp-grid" style={{ marginBottom: 14 }}>
-        <div className="hp-kpi"><b>{fmtPct(g('STH').tm)}</b><span>median total margin, acute care, {Ly}</span><i>Critical access: {fmtPct(g('CAH').tm)}</i></div>
+        <div className="hp-kpi"><b>{fmtPct(g('STH').tm)}</b><span>median total margin, acute care, {Ly} cost report year</span><i>Critical access: {fmtPct(g('CAH').tm)}</i></div>
         <div className="hp-kpi"><b>{fmtPct(g('STH').loss, 0)}</b><span>of acute care hospitals lost money</span><i>Critical access: {fmtPct(g('CAH').loss, 0)}</i></div>
         <div className="hp-kpi"><b>{fmtDays(g('STH').dcoh)}</b><span>cash on hand, median acute care hospital</span><i>Critical access: {fmtDays(g('CAH').dcoh)}</i></div>
         <div className="hp-kpi"><b>{fmtUsdM(g('acute').npr)}</b><span>net patient revenue, acute and critical access</span><i>{fmtInt(g('acute').n)} hospitals</i></div>
