@@ -1,6 +1,21 @@
 // Vercel serverless function: stores beta sign-ups, feedback and data-issue reports in the shared
 // TRYNYTY beta database (Neon Postgres, connected to each explorer through Vercel Storage).
 const { neon } = require('@neondatabase/serverless');
+const { verifyToken, createClerkClient } = require('@clerk/backend');
+
+// When the person is signed in, record the email on their account, so the beta discount can be
+// matched to a verified address. Returns '' when sign-in is off or the token is missing.
+async function verifiedEmail(req) {
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!secretKey || !token) return '';
+  try {
+    const claims = await verifyToken(token, { secretKey });
+    const user = await createClerkClient({ secretKey }).users.getUser(claims.sub);
+    const e = user.emailAddresses.find(x => x.id === user.primaryEmailAddressId) || user.emailAddresses[0];
+    return e ? e.emailAddress.toLowerCase() : '';
+  } catch (e) { return ''; }
+}
 
 const KINDS = new Set(['signup', 'feedback', 'issue']);
 const TOOLS = new Set(['ma-enrollment', 'hospital-financial', 'physician-practice']);
@@ -31,12 +46,14 @@ module.exports = async (req, res) => {
         id bigserial PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now(), tool text, kind text NOT NULL,
         name text, email text, organization text, role text, tools text[], use_case text, message text,
         page text, page_title text, consent boolean, user_agent text)`;
+      await sql`ALTER TABLE beta_submissions ADD COLUMN IF NOT EXISTS verified_email text`;
       ready = true;
     }
-    await sql`INSERT INTO beta_submissions (tool, kind, name, email, organization, role, tools, use_case, message, page, page_title, consent, user_agent)
+    const verified = await verifiedEmail(req);
+    await sql`INSERT INTO beta_submissions (tool, kind, name, email, organization, role, tools, use_case, message, page, page_title, consent, user_agent, verified_email)
       VALUES (${tool}, ${kind}, ${str(b.name, 200) || null}, ${email || null}, ${str(b.organization, 200) || null}, ${str(b.role, 100) || null},
               ${tools}, ${str(b.use_case, 3000) || null}, ${message || null}, ${str(b.page, 1000) || null}, ${str(b.page_title, 300) || null},
-              ${kind === 'signup' ? b.consent === true : null}, ${str(req.headers['user-agent'], 300) || null})`;
+              ${kind === 'signup' ? b.consent === true : null}, ${str(req.headers['user-agent'], 300) || null}, ${verified || null})`;
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('beta submission failed', e);
