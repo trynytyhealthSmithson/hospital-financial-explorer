@@ -4,7 +4,7 @@
 // every /data request so the edge middleware can check it too.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ClerkProvider, SignIn, UserButton, OrganizationSwitcher, useAuth, useClerk, useOrganizationList } from '@clerk/react';
-import { grantOf, decodeClaims, planSummary, TOOLS } from './entitle';
+import { grantOf, decodeClaims, planSummary, orgDomainOk, TOOLS } from './entitle';
 import { TOOL, TOOL_NAME } from './tool';
 import './gate.css';
 
@@ -12,6 +12,21 @@ const PK = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
 export const AUTH_ON = !!PK;
 const PRICING = 'https://www.trynytyhealth.com/pricing';
 const FREE = 'https://www.trynytyhealth.com/tools';
+const ACCOUNT = process.env.REACT_APP_ACCOUNT_URL || 'https://www.trynytyhealth.com/account';
+
+const CardIcon = () => (
+  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" /><path d="M1.5 6.5h13" />
+  </svg>
+);
+// The Clerk account menu, plus a link to the plan and billing page on the website.
+const AccountUserButton = () => (
+  <UserButton>
+    <UserButton.MenuItems>
+      <UserButton.Link label="Plan and billing" labelIcon={<CardIcon />} href={ACCOUNT} />
+    </UserButton.MenuItems>
+  </UserButton>
+);
 
 // Add the sign-in token to same-site /data requests. Installed once; reads the current getter.
 const tokenGetter = { fn: null };
@@ -69,7 +84,11 @@ function NoAccessView({ claims, recheck, checking, inOrg }) {
   const endedThis = ended[TOOL];
   const teamPlan = inOrg && planSummary({ org_tools: claims && claims.org_tools, org_until: claims && claims.org_until }).have.length > 0;
   let title; let body;
-  if (endedThis) {
+  const doms = [].concat((claims && claims.org_domains) || []).filter(Boolean);
+  if (inOrg && !orgDomainOk(claims)) {
+    title = `Your team’s plan covers ${doms.map(d => `@${d}`).join(' or ')} email addresses`;
+    body = <p className="gate-text">Sign in with your work email to use your team’s plan, or ask your team admin to contact us if you work with the team from another organization.</p>;
+  } else if (endedThis) {
     title = `Your access to the ${TOOL_NAME} ended on ${fmtDate(endedThis)}`;
     body = <p className="gate-text">Renew on the pricing page to pick up where you left off.{inOrg ? ' If your team renews, ask your team admin to let us know.' : ''}</p>;
   } else if (have.length) {
@@ -99,7 +118,7 @@ function NoAccessView({ claims, recheck, checking, inOrg }) {
         <button className="gate-btn" onClick={recheck} disabled={checking}>{checking ? 'Checking…' : 'I just got access, check again'}</button>
         <button className="gate-btn link" onClick={() => signOut()}>Sign out</button>
       </div>
-      <div className="gate-user"><UserButton /></div>
+      <div className="gate-user"><AccountUserButton /></div>
     </Shell>
   );
 }
@@ -169,7 +188,7 @@ function AccountMenu() {
   return (
     <span className="gate-account">
       {teams > 0 && <OrganizationSwitcher hidePersonal={teams > 0} />}
-      <UserButton />
+      <AccountUserButton />
     </span>
   );
 }

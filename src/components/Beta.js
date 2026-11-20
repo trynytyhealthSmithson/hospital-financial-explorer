@@ -28,8 +28,14 @@ export function BetaButtons() {
   );
 }
 
+// The signed-in person's email, when sign-in is on (window.Clerk is set by the sign-in gate).
+const signedInEmail = () => {
+  const u = typeof window !== 'undefined' && window.Clerk && window.Clerk.user;
+  return (u && u.primaryEmailAddress && u.primaryEmailAddress.emailAddress) || '';
+};
+
 function BetaDialog({ kind, setKind, onClose }) {
-  const [f, setF] = useState({ name: '', email: '', organization: '', role: '', tools: [TOOL], use_case: '', message: '', consent: true, website: '' });
+  const [f, setF] = useState({ name: '', email: signedInEmail(), organization: '', role: '', tools: [TOOL], use_case: '', message: '', consent: true, website: '' });
   const [state, setState] = useState('idle');   // idle | sending | done | error
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -41,7 +47,11 @@ function BetaDialog({ kind, setKind, onClose }) {
   const submit = async e => {
     e.preventDefault(); setState('sending'); setErr('');
     try {
-      const r = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const headers = { 'Content-Type': 'application/json' };
+      const session = window.Clerk && window.Clerk.session;
+      const token = session ? await session.getToken().catch(() => null) : null;
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const r = await fetch(ENDPOINT, { method: 'POST', headers,
         body: JSON.stringify({ ...f, kind, tool: TOOL, page: window.location.href, page_title: document.title }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || 'Something went wrong. Please try again.');
@@ -68,7 +78,7 @@ function BetaDialog({ kind, setKind, onClose }) {
             <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: 'var(--gray-700)' }}>{INTRO[kind]}</p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <label style={{ ...field, flex: '1 1 200px' }}>Name<input style={input} value={f.name} onChange={e => set('name', e.target.value)} autoComplete="name" required={kind === 'signup'} /></label>
-              <label style={{ ...field, flex: '1 1 200px' }}>Work email{kind !== 'signup' ? ' (optional)' : ''}<input style={input} type="email" value={f.email} onChange={e => set('email', e.target.value)} autoComplete="email" required={kind === 'signup'} /></label>
+              <label style={{ ...field, flex: '1 1 200px' }}>Work email{kind === 'feedback' ? ' (needed for the 50% beta discount)' : kind !== 'signup' ? ' (optional)' : ''}<input style={input} type="email" value={f.email} onChange={e => set('email', e.target.value)} autoComplete="email" required={kind === 'signup'} readOnly={!!signedInEmail()} /></label>
             </div>
             {kind === 'signup' && <>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
