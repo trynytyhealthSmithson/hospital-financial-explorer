@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ChartCard from './ChartCard';
 import { titleCase } from './HospitalMap';
-import { loadOwnership, loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER, sysCash } from '../data';
+import { loadOwnership, loadAco, load340b, loadHcrisIdx, loadIpps, loadQuality, loadHospitals, loadYear, fmtInt, fmtPct, fmtUsdM, median, FTYPE_ORDER, sysCash, crYearLong } from '../data';
 
 const REGION = {
   Northeast: ['CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA'],
@@ -114,7 +114,7 @@ export default function Screener({ meta, query, onHospital }) {
           </div>)}
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.hacp} onChange={e => set('hacp', e.target.checked ? '1' : '')} /> Took the hospital-acquired condition penalty (FY 2026)</label>
           <label className="cm-field" style={{ margin: 0 }}>340B<select value={F.b340 || ''} onChange={e => set('b340', e.target.value)}><option value="">Any</option><option value="1">Participating</option><option value="0">Not participating</option></select></label>
-          <label className="cm-field" style={{ margin: 0 }}>MSSP ACO{AC ? ` (${AC.meta.latest})` : ''}<select value={F.aco || ''} onChange={e => set('aco', e.target.value)}><option value="">Any</option><option value="1">In an ACO</option><option value="0">Not found in an ACO</option></select></label>
+          <label className="cm-field" style={{ margin: 0 }}>MSSP ACO{AC ? `, program year ${AC.meta.latest}` : ''}<select value={F.aco || ''} onChange={e => set('aco', e.target.value)}><option value="">Any</option><option value="1">In an ACO</option><option value="0">Not found in an ACO</option></select></label>
           <label className="cm-field" style={{ margin: 0 }}>Ownership<select value={F.chow || ''} onChange={e => set('chow', e.target.value)}><option value="">Any</option><option value="1">Changed owner or merged since 2021</option></select></label>
           <label className="cm-field" style={{ margin: 0 }}>Closures<select value={F.closed || ''} onChange={e => set('closed', e.target.value)}><option value="">Any</option><option value="0">Leave out closed or converted</option><option value="1">Only closed or converted (rural)</option></select></label>
           <label style={{ fontSize: 12, color: 'var(--gray-700)', display: 'flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={!!F.flag} onChange={e => set('flag', e.target.checked ? '1' : '')} /> Include reports flagged as unusable</label>
@@ -122,7 +122,7 @@ export default function Screener({ meta, query, onHospital }) {
       </div>
 
       <ChartCard title={!H || !Y ? 'Loading…' : `${fmtInt(rows.length)} hospitals match`} csvName={`hospital-screen-${year}`}
-        sub={!H || !Y ? '' : `${year} cost reports${active ? `, ${active} ${active === 1 ? 'filter' : 'filters'}` : ''}. Median total margin of these hospitals: ${fmtPct(median(tms))}. The 3-year change compares with ${year - 3}. The page address keeps your filters, so you can bookmark or share this screen.`}
+        sub={!H || !Y ? '' : `${crYearLong(year)}${active ? `, ${active} ${active === 1 ? 'filter' : 'filters'}` : ''}. Median total margin of these hospitals: ${fmtPct(median(tms))}. The 3-year change compares with ${year - 3}. The page address keeps your filters, so you can bookmark or share this screen.`}
         csv={() => [['ccn', 'hospital', 'city', 'state', 'county_fips', 'type', 'ownership', 'urban_rural', 'teaching', 'beds', 'net_patient_revenue', 'total_margin', 'total_margin_change_3yr', 'patient_service_margin', 'days_cash_on_hand', 'occupancy', 'original_medicare_day_share', 'medicare_day_share_incl_ma', 'ma_share_of_medicare_days', 'medicare_ffs_inpatient_margin', 'medicaid_day_share', 'health_system_id', 'case_mix_index', 'readmissions_penalty_fy2027', 'star_rating', 'vbp_total_performance_score', 'readmission_conditions_above_expected', 'hac_penalty', 'in_340b', 'contract_pharmacies_340b', 'mssp_aco', 'latest_ownership_change_since_2021', 'closed_or_converted_year', 'flagged'],
           ...rows.map(r => [r.h.c, r.h.n, r.h.ci, r.h.s, r.h.f, meta.ftype[r.h.t], meta.ctrl[r.h.g], r.h.ru, r.h.te, r.beds, r.npr, r.tm, r.dtm, r.pm, r.dcoh, r.occ, r.mcr, r.mall ?? '', r.mapen ?? '', r.mmm ?? '', r.mcd, r.h.sy || '', r.cmi ?? '', r.hrrp ?? '', r.star ?? '', r.tps ?? '', r.err_hi ?? '', r.hacpen == null ? '' : r.hacpen ? 'yes' : 'no', r.in340 ? 'yes' : 'no', r.cp340 ?? '', r.aco, r.chow, r.closed, r.flag ? 'yes' : 'no'])]}>
         <div style={{ overflow: 'auto', maxHeight: 620 }}>

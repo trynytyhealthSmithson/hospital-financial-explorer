@@ -212,3 +212,6 @@ export const loadOpIdx = () => load('opidx', `${BASE}/op_idx.json`);
 export const load340b = () => load('340b', `${BASE}/340b.json`);
 export const loadAco = () => load('aco', `${BASE}/aco.json`);
 export const loadOwnership = () => load('own', `${BASE}/ownership.json`);
+
+// CMS cost report years run by when the fiscal year begins: reports beginning October of the prior year through September.
+export const crYearLong = y => `${y} cost report year (fiscal years beginning October ${+y - 1} through September ${y})`;
