@@ -1,8 +1,11 @@
 """Build hospital-year facts from the CMS Hospital Provider Cost Report PUF (data.cms.gov).
 
-One row per hospital (CCN) per cost report year. When a hospital filed more than one report
-for a year (a change of ownership or a short period), flows are summed across the reports and
-the balance sheet comes from the report with the latest period end.
+One row per hospital (CCN) per cost report year. CMS files each report under the year its fiscal year begins.
+When a hospital has more than one report in a file year (a change of ownership, a short period or a change of
+fiscal year end), every report is kept: flows are summed across them and the balance sheet comes from the report
+with the latest period end. No report is dropped, so each period a hospital reported appears exactly once. A year
+whose reports cover less than 11 months is flagged 'partial', more than 13.5 months 'long'; both are left out of
+medians and rankings but count in combined totals (system and area totals scale a long year to 12 months).
 
 Outputs (public/data):
   meta.json            years, labels, definitions, counts
@@ -49,6 +52,14 @@ def ctrl_group(c):
     c = int(c) if pd.notna(c) else 0
     return 'np' if c in (1, 2) else 'fp' if 3 <= c <= 6 else 'gov' if 7 <= c <= 13 else 'unk'
 CTRL = {'np': 'Nonprofit', 'fp': 'For-profit', 'gov': 'Government', 'unk': 'Unknown'}
+# Corrections to the cost report's type of control, with the source. Shown on the hospital's page.
+OWNER_FIX = {
+    '330226': ('np', 'The cost report codes this hospital as proprietary (type of control 3). The Unity Hospital of Rochester is a 501(c)(3) nonprofit (IRS, EIN 23-7221763) in Rochester Regional Health, so it is shown as nonprofit.'),
+}
+# Notes shown on a hospital's page (membership questions the AHRQ 2023 linkage cannot answer)
+HOSP_NOTE = {
+    '390332': "A joint venture of St. Luke's University Health Network and Geisinger, opened in 2019 with funding and governance shared equally and managed by St. Luke's. The AHRQ 2023 linkage places it in St. Luke's. In December 2025 St. Luke's announced it would buy Geisinger's share, pending regulatory approval; Geisinger has challenged this in court.",
+}
 def bed_band(b):
     return None if not b or b <= 0 else 'b1' if b < 25 else 'b2' if b < 100 else 'b3' if b < 300 else 'b4' if b < 500 else 'b5'
 BEDS = {'b1': 'Under 25 beds', 'b2': '25 to 99 beds', 'b3': '100 to 299 beds', 'b4': '300 to 499 beds', 'b5': '500 or more beds'}
@@ -92,10 +103,10 @@ def load_year(y):
     rows = []
     for ccn, g in d.groupby('ccn'):
         g = g.sort_values('e')
-        # Two full-year reports in one file year: keep the latest. Sum only short periods that together make up a year.
-        if len(g) > 1 and g['months'].sum() > 13.5:
-            g = g[g['e'] > g['e'].iloc[-1] - pd.Timedelta(days=380)]
-            while len(g) > 1 and g['months'].sum() > 13.5: g = g.iloc[1:]
+        # Keep every report. Guard against a report whose period overlaps a later one (none in the 2016 to 2024
+        # files): keep the later report so no days are counted twice.
+        while len(g) > 1 and (g['b'].iloc[1:].values <= g['e'].iloc[:-1].values).any():
+            k = int(np.argmax(g['b'].iloc[1:].values <= g['e'].iloc[:-1].values)); g = g.drop(g.index[k])
         last = g.iloc[-1]
         r = {'ccn': ccn, 'year': y, 'n_rep': len(g), 'months': float(g['months'].sum()), 'begin': str(g['b'].min().date()), 'end': str(last['e'].date())}
         for c, k in FLOW.items(): v = g[c]; r[k] = float(v.sum()) if v.notna().any() else None
@@ -137,6 +148,7 @@ def derive(r):
     if m['pm'] is not None and abs(m['pm']) > 1: q.append('margin')
     if r['ta'] and r['tl'] is not None and r['fb'] is not None and abs(r['ta'] - r['tl'] - r['fb']) > 0.01 * abs(r['ta']) + 1000: q.append('balance')
     if mo < 11: q.append('partial')
+    if mo > 13.5: q.append('long')
     soft = []
     if m['dcoh'] is not None and (m['dcoh'] < 0 or m['dcoh'] > 2000): soft.append('cash'); m['dcoh'] = None
     if 'balance' in q: q.remove('balance'); soft.append('balance'); m['cr'] = m['debt'] = m['dcoh'] = None
@@ -168,7 +180,7 @@ def main():
             if isinstance(v, float) and not np.isfinite(v): r[k] = None
         r['m'], r['q'] = derive(r)
         r['rev'] = (r['npr'] or 0) + (r['oth'] or 0) if r['npr'] is not None else None
-        r['cg'] = ctrl_group(r['ctrl']); r['bb'] = bed_band(r['beds'])
+        r['cg'] = OWNER_FIX[r['ccn']][0] if r['ccn'] in OWNER_FIX else ctrl_group(r['ctrl']); r['bb'] = bed_band(r['beds'])
         # Urban or rural by geography: Medicare CBSA codes under 100 or 999xx are a state's rural area. The reported
         # flag reflects payment reclassification (many metro hospitals reclassify as rural), kept separately as 'rc'.
         try: cb = float(r['cbsa']) if r['cbsa'] is not None else None
@@ -209,20 +221,26 @@ def main():
     index, states, byyear = [], {}, {y: [] for y in YEARS}
     IX = ['npr', 'rev', 'nisp', 'ni', 'beds', 'bed_days', 'days', 'mcr_days', 'mcd_days', 'dis', 'cost', 'uncomp', 'fte']
     IM = ['pm', 'tm', 'dcoh', 'occ', 'npr_ad']
-    hard = lambda r: 1 if [x for x in r['q'] if x[0] != '~'] else 0
+    # 0 usable; 2 the period is not about a year (partial or long), otherwise sound: left out of medians and rankings,
+    # counted in combined totals; 1 a data problem (no net patient revenue, margin beyond 100%): left out of both
+    def hard(r):
+        h = [x for x in r['q'] if x[0] != '~']
+        return 0 if not h else 2 if set(h) <= {'partial', 'long'} else 1
     for ccn, g in df2.groupby('ccn'):
         L = latest.loc[ccn]; g = g.set_index('year')
         hi = len(index)
-        for y, r in g.iterrows(): byyear[int(y)].append([hi] + [R(r[k]) for k in IX] + [None if r['m'][k] is None else R(r['m'][k], 0 if k == 'npr_ad' else 1 if k == 'dcoh' else 4) for k in IM] + [hard(r)])
+        for y, r in g.iterrows(): byyear[int(y)].append([hi] + [R(r[k]) for k in IX] + [None if r['m'][k] is None else R(r['m'][k], 0 if k == 'npr_ad' else 1 if k == 'dcoh' else 4) for k in IM] + [hard(r), R(r['months'], 1)])
         index.append({'c': ccn, 'n': L['name'], 'ci': L['city'], 's': L['st'], 'f': L['fips'], 'z': (L['zip'] or '')[:5], 'cb': None if L['cbsa'] is None else str(L['cbsa']).split('.')[0],
                       'ru': L['ru'], 'rc': L['rc'], 't': L['ft'], 'g': L['cg'], 'te': L['teach'], 'bb': L['bb'], 'yr': sorted(int(y) for y in g.index)})
+        nt = ' '.join(x for x in ((OWNER_FIX.get(ccn) or (None, None))[1], HOSP_NOTE.get(ccn)) if x)
+        if nt: index[-1]['nt'] = nt
         states.setdefault(L['st'] or 'NA', {})[ccn] = {'addr': L['addr'], 'zip': L['zip'], 'county': L['county'], 'ctrl': L['ctrl'],
             'years': {int(y): detail(r) for y, r in g.iterrows()}}
     (OUT / 'hosp').mkdir(parents=True, exist_ok=True)
     for st, o in states.items(): dump(o, OUT / 'hosp' / f'{st}.json', separators=(',', ':'))
     dump(index, OUT / 'hospitals.json', separators=(',', ':'))
     (OUT / 'year').mkdir(exist_ok=True)
-    for y, rows in byyear.items(): dump({'fields': ['i'] + IX + IM + ['flag'], 'rows': rows}, OUT / 'year' / f'{y}.json', separators=(',', ':'))
+    for y, rows in byyear.items(): dump({'fields': ['i'] + IX + IM + ['flag', 'mo'], 'rows': rows}, OUT / 'year' / f'{y}.json', separators=(',', ':'))
     dump({str(y): v for y, v in peers.items()}, OUT / 'peers.json', separators=(',', ':'))
     meta = {'years': YEARS, 'ftype': {**FTYPE, 'OTH': 'Other'}, 'ctrl': CTRL, 'beds': BEDS,
             'counts': {str(y): {'hospitals': int((df2.year == y).sum()), 'clean': int(sum(1 for r in recs if r['year'] == y and not hard(r)))} for y in YEARS},

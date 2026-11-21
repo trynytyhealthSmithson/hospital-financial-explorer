@@ -35,41 +35,41 @@
  "counts": {
   "2016": {
    "hospitals": 6107,
-   "clean": 5617
+   "clean": 5542
   },
   "2017": {
    "hospitals": 6077,
-   "clean": 5571
+   "clean": 5507
   },
   "2018": {
    "hospitals": 6049,
-   "clean": 5523
+   "clean": 5434
   },
   "2019": {
    "hospitals": 6017,
-   "clean": 5486
+   "clean": 5414
   },
   "2020": {
    "hospitals": 5990,
-   "clean": 5495
+   "clean": 5446
   },
   "2021": {
    "hospitals": 5984,
-   "clean": 5537
+   "clean": 5490
   },
   "2022": {
    "hospitals": 6004,
-   "clean": 5541
+   "clean": 5480
   },
   "2023": {
    "hospitals": 6046,
-   "clean": 5502
+   "clean": 5451
   },
   "2024": {
    "hospitals": 6026,
-   "clean": 5474
+   "clean": 5412
   }
  },
  "county_match": 0.9773,
- "built": "2026-11-06"
+ "built": "2026-11-20"
 }

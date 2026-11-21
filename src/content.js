@@ -4,6 +4,14 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.6', date: 'November 2026', items: [
+      'Every cost report now counts: when a hospital has several reports in one CMS file year, all are added together (50 to 90 hospitals a year had a report left out before). Years covering more than 13.5 months are flagged and left out of peer comparisons.',
+      'System, state and county totals use one set of reports for net patient revenue, net income and both combined margins: every report without a data problem, including part-year reports, with years over 13.5 months scaled to 12.',
+      'The Unity Hospital of Rochester is shown as nonprofit (it files as proprietary). Geisinger St. Luke\'s Hospital is noted as a joint venture of Geisinger and St. Luke\'s on both systems\' pages.',
+      'Year labels say which cost report year a figure comes from, and ACO columns say program year 2026.',
+    ],
+  },
+  {
     version: 'Beta 2.5', date: 'November 2026', items: [
       'Facility Network Adequacy (Medicare Advantage only): for every county, whether every Medicare-certified facility in reach would meet the CMS 2026 HSD facility standards for acute inpatient hospital beds, cardiac surgery, cardiac catheterization, critical care, outpatient surgery, skilled nursing and inpatient psychiatric services.',
       'National and state maps by status, clickable counts that list the counties that do not meet a standard or meet it thinly, and county pages with every facility type and the facilities in reach, all downloadable.',

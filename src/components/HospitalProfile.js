@@ -30,6 +30,7 @@ const KPIS = [
 const FLAG_TEXT = {
   npr: 'No net patient revenue was reported.', margin: 'The patient service margin is beyond plus or minus 100%, which usually means a reporting problem.',
   partial: 'The report covers less than 11 months (often a change of ownership or a new or closing hospital).',
+  long: 'The reports in this file year cover more than 13.5 months (two fiscal years landed in one CMS file year, often after a change of fiscal year end or ownership). Dollar figures cover the whole period; ratios are shown but the year is left out of peer comparisons.',
   '~cash': 'Cash and investments are negative or implausibly large, usually because a health system holds the cash centrally; days cash on hand is not shown.',
   '~balance': 'The balance sheet does not balance (assets differ from liabilities plus fund balance by more than 1%); balance-sheet ratios are not shown.',
   '~occ': 'Occupancy above 120% suggests the bed count is wrong; occupancy is not shown.', '~tmargin': 'The total margin is beyond plus or minus 100%; it is not shown.',
@@ -90,6 +91,7 @@ export default function HospitalProfile({ ccn, meta }) {
     <div>
       <div className="card" style={{ padding: '16px 18px', marginBottom: 14 }}>
         <div className="cm-kicker">{meta.ftype[h.t]} · {meta.ctrl[h.g]} · {h.ru === 'R' ? 'Rural' : 'Urban'}{h.rc === 'R' ? ' (reclassified as rural for Medicare payment)' : h.rc === 'U' ? ' (reclassified as urban for Medicare payment)' : ''}{h.te !== 'none' ? ` · ${h.te === 'major' ? 'Major' : 'Minor'} teaching` : ''} · CCN {ccn}</div>
+        {h.nt && <p className="cm-note" style={{ marginTop: 6 }}>{h.nt}</p>}
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{titleCase(h.n)}</h1>
         <div style={{ color: 'var(--gray-600)', fontSize: 14 }}>{loc}{D.county ? ` · ${titleCase(D.county)} County` : ''}</div>
         {h.sy && SY && SY[h.sy] && <div style={{ fontSize: 14, marginTop: 4 }}>Part of <a href={`#sys/${h.sy}`}><b>{SY[h.sy].n}</b></a> ({SY[h.sy].h.length} hospitals)</div>}
