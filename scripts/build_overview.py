@@ -1,5 +1,5 @@
 """National and state trend summary for the Overview page (public/data/overview.json).
-Reads the files build_hospitals.py writes. Only usable (unflagged) reports count toward medians and margins."""
+Reads the files build_hospitals.py writes. Only usable (unflagged) reports count toward medians; combined margins and revenue use every report without a data problem."""
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -14,12 +14,16 @@ def med(v):
     return round(float(np.median(v)), 4) if v else None
 
 def summarize(rows):
-    ok = [r for r in rows if not r['flag']]
+    # Medians from usable reports (flag 0); combined margin and revenue from every report without a data problem
+    # (flag 1), with a file year covering more than 13.5 months scaled to 12, as in the system rollups
+    ok = [r for r in rows if not r['flag']]; use = [r for r in rows if r['flag'] != 1]
+    f = lambda r: 12 / r['mo'] if r.get('mo') and r['mo'] > 13.5 else 1
+    S = lambda k: sum((r[k] or 0) * f(r) for r in use)
     tm = [r['tm'] for r in ok if r['tm'] is not None]
-    rev = sum(r['rev'] or 0 for r in ok)
+    rev = S('rev')
     return {'n': len(rows), 'clean': len(ok), 'tm': med(tm), 'pm': med([r['pm'] for r in ok]), 'dcoh': med([r['dcoh'] for r in ok]),
             'occ': med([r['occ'] for r in ok]), 'loss': round(sum(1 for v in tm if v < 0) / len(tm), 4) if tm else None,
-            'agg_tm': round(sum(r['ni'] or 0 for r in ok) / rev, 4) if rev else None, 'npr': int(sum(r['npr'] or 0 for r in rows))}
+            'agg_tm': round(S('ni') / rev, 4) if rev else None, 'npr': int(S('npr'))}
 
 GROUPS = {'STH': lambda h: h['t'] == 'STH', 'CAH': lambda h: h['t'] == 'CAH', 'STH_rural': lambda h: h['t'] == 'STH' and h['ru'] == 'R',
           'STH_urban': lambda h: h['t'] == 'STH' and h['ru'] == 'U', 'STH_np': lambda h: h['t'] == 'STH' and h['g'] == 'np',

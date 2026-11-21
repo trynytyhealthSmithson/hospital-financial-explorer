@@ -119,13 +119,15 @@ const sum = (L, k) => L.reduce((t, r) => t + (r[k] || 0), 0);
 
 /**
  * Roll up a set of hospital-year rows. Dollar and day totals are summed; margins and shares are
- * recalculated from the sums (revenue-weighted), never averaged. Reports flagged as unreliable
- * (no net patient revenue, a margin beyond plus or minus 100%, or a partial year) are counted but
- * left out of margins and medians.
+ * recalculated from the sums (revenue-weighted), never averaged. Net patient revenue, net income and
+ * the combined margins use one set of reports: all but those with a data problem (flag 1: no net patient
+ * revenue or a margin beyond plus or minus 100%). Reports covering part of a year count as filed; a year
+ * covering more than 13.5 months is scaled to 12. Medians use only usable reports (flag 0).
  */
 export function rollup(rows) {
-  const ok = rows.filter(r => !r.flag);
-  const rev = sum(ok, 'rev'), npr = sum(ok, 'npr'), days = sum(rows, 'days'), bd = sum(rows, 'bed_days'), cost = sum(rows, 'cost');
+  const ok = rows.filter(r => !r.flag), use = rows.filter(r => r.flag !== 1);
+  const f = r => (r.mo > 13.5 ? 12 / r.mo : 1), S = k => use.reduce((t, r) => t + (r[k] || 0) * f(r), 0);
+  const rev = S('rev'), npr = S('npr'), days = sum(rows, 'days'), bd = sum(rows, 'bed_days'), cost = sum(rows, 'cost');
   const tms = ok.map(r => r.tm).filter(v => v != null);
   const qs = rows.map(r => r.q).filter(Boolean);
   const cm = rows.map(r => r.ip && r.ip.cmi).filter(v => v != null);
@@ -133,8 +135,8 @@ export function rollup(rows) {
   return {
     cmi: median(cm),
     stars: st.length ? st.reduce((a, b) => a + b, 0) / st.length : null, hacpen: hp.length ? hp.filter(q => q.hacpen).length / hp.length : null, tps: median(tp),
-    n: rows.length, clean: ok.length, beds: sum(rows, 'beds'), npr: sum(rows, 'npr'), dis: sum(rows, 'dis'), fte: sum(rows, 'fte'),
-    tm: rev ? sum(ok, 'ni') / rev : null, pm: npr ? sum(ok, 'nisp') / npr : null,
+    n: rows.length, clean: ok.length, beds: sum(rows, 'beds'), npr, dis: sum(rows, 'dis'), fte: sum(rows, 'fte'),
+    tm: rev ? S('ni') / rev : null, pm: npr ? S('nisp') / npr : null,
     tm_med: median(tms), loss: tms.length ? tms.filter(v => v < 0).length / tms.length : null,
     dcoh: median(ok.map(r => r.dcoh)), occ: bd ? days / bd : null,
     mcr: days ? sum(rows, 'mcr_days') / days : null, mcd: days ? sum(rows, 'mcd_days') / days : null,

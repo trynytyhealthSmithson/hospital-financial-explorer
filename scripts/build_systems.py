@@ -60,15 +60,22 @@ if HX.exists():
             H[idx[c]]['sy'] = sid; added += 1
 print('added from cost report home offices', added)
 
-# Yearly rollups (same rules as the app: usable reports only for margins and medians)
+# Yearly rollups. Net patient revenue, net income and both combined margins use one set of reports: every report
+# except those with a data problem (flag 1). Reports covering part of a year count as filed; a file year whose reports
+# cover more than 13.5 months is scaled to 12 months. Medians use only usable reports (flag 0), as elsewhere.
 def rollup(rows):
-    ok = [r for r in rows if not r['flag']]
-    rev = sum(r['rev'] or 0 for r in ok); npr = sum(r['npr'] or 0 for r in ok)
+    use = [r for r in rows if r['flag'] != 1]; ok = [r for r in rows if not r['flag']]
+    f = lambda r: 12 / r['mo'] if r.get('mo') and r['mo'] > 13.5 else 1
+    S = lambda k: sum((r[k] or 0) * f(r) for r in use)
+    rev, npr, ni, nisp = S('rev'), S('npr'), S('ni'), S('nisp')
     tms = [r['tm'] for r in ok if r['tm'] is not None]
-    return {'n': len(rows), 'beds': int(sum(r['beds'] or 0 for r in rows)), 'npr': int(sum(r['npr'] or 0 for r in rows)),
-            'ni': int(sum(r['ni'] or 0 for r in ok)), 'tm': round(sum(r['ni'] or 0 for r in ok) / rev, 4) if rev else None,
-            'pm': round(sum(r['nisp'] or 0 for r in ok) / npr, 4) if npr else None, 'tm_med': round(float(np.median(tms)), 4) if tms else None,
-            'dis': int(sum(r['dis'] or 0 for r in rows))}
+    o = {'n': len(rows), 'beds': int(sum(r['beds'] or 0 for r in rows)), 'npr': int(npr), 'ni': int(ni),
+         'tm': round(ni / rev, 4) if rev else None, 'pm': round(nisp / npr, 4) if npr else None,
+         'tm_med': round(float(np.median(tms)), 4) if tms else None, 'dis': int(sum(r['dis'] or 0 for r in rows))}
+    nx = len(rows) - len(use); nl = sum(1 for r in use if f(r) != 1)
+    if nx: o['nx'] = nx
+    if nl: o['nl'] = nl
+    return o
 for y in meta['years']:
     Y = json.load(open(OUT / 'year' / f'{y}.json')); F = Y['fields']; by = defaultdict(list)
     for row in Y['rows']:
@@ -106,6 +113,13 @@ if HD.exists():
             if t['dep']: r['age'] = round(t['acc'] / t['dep'], 1)
             if t['add']: r['add'] = round(t['add'])
 
+# Notes on a system's page (membership questions the AHRQ 2023 linkage cannot answer)
+SYS_NOTE = {
+    'S17816853': "Geisinger St. Luke's Hospital (Orwigsburg, PA) is listed under St. Luke's University Health Network, as in the AHRQ 2023 linkage. It opened in 2019 as an equal joint venture of the two systems, managed by St. Luke's; in December 2025 St. Luke's announced it would buy Geisinger's share, pending regulatory approval.",
+    'S17773829': "Geisinger St. Luke's Hospital (Orwigsburg, PA) opened in 2019 as an equal joint venture with Geisinger, managed by St. Luke's; in December 2025 St. Luke's announced it would buy Geisinger's share, pending regulatory approval.",
+}
+for sid, t in SYS_NOTE.items():
+    if sid in sysd: sysd[sid]['nt'] = t
 json.dump(H, open(OUT / 'hospitals.json', 'w'), separators=(',', ':'), allow_nan=False)
 json.dump(sysd, open(OUT / 'systems.json', 'w'), separators=(',', ':'), allow_nan=False)
 big = sorted(sysd.items(), key=lambda kv: -len(kv[1]['h']))[:8]

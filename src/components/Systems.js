@@ -78,12 +78,13 @@ export function SystemPage({ id, meta }) {
         <div className="cm-kicker">Health system · {sys.h.length} hospitals in {sys.st.length} {sys.st.length === 1 ? 'state' : 'states'}{sys.ci ? ` · Headquartered in ${titleCase(sys.ci)}, ${sys.s}` : ''}</div>
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{sys.n}</h1>
         <div style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}><a href="#systems">All health systems</a>{sys.h.length <= 5 && <a href={`#compare/${sys.h.join(',')}`}>Compare its hospitals</a>}<a href={`${PHYS_URL}/#sys/${id}`} target="_blank" rel="noreferrer">Aligned physician groups and consolidation</a></div>
+        {sys.nt && <p className="cm-note" style={{ marginTop: 8 }}>{sys.nt}</p>}
       </div>
       <div className="hp-grid" style={{ marginBottom: 14 }}>
         <div className="hp-kpi"><b>{fmtUsdM(L.npr)}</b><span>net patient revenue, {Ly} cost report year</span><i>{fmtInt(L.beds)} beds, {fmtInt(L.dis)} discharges</i></div>
         <div className="hp-kpi"><b style={{ color: L.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(L.tm)}</b><span>combined total margin</span><i>Median member hospital {fmtPct(L.tm_med)}</i></div>
         <div className="hp-kpi"><b>{fmtPct(L.pm)}</b><span>combined patient service margin</span></div>
-        <div className="hp-kpi"><b>{fmtUsdM(L.ni)}</b><span>net income of member hospitals</span><i>From hospital cost reports; system-level items are not included</i></div>
+        <div className="hp-kpi"><b>{fmtUsdM(L.ni)}</b><span>net income of member hospitals</span><i>From hospital cost reports; system-level items are not included{L.nx ? `. Leaves out ${L.nx} ${L.nx === 1 ? 'report' : 'reports'} with a data problem` : ''}{L.nl ? `; ${L.nl} ${L.nl === 1 ? 'report covering' : 'reports covering'} more than 13.5 months scaled to 12` : ''}</i></div>
         {L.mmm != null && <div className="hp-kpi"><b style={{ color: L.mmm < 0 ? 'var(--red)' : 'var(--teal-dark)' }}>{fmtPct(L.mmm)}</b><span>Medicare fee-for-service inpatient margin</span><i>{L.mmn} inpatient PPS {L.mmn === 1 ? 'hospital' : 'hospitals'}{HX && HX.meta.mm_margin[Ly] != null ? `; all PPS hospitals ${fmtPct(HX.meta.mm_margin[Ly])}` : ''}</i></div>}
         {L.mall != null && <div className="hp-kpi"><b>{fmtPct(L.mall, 0)}</b><span>of inpatient days are Medicare, including Medicare Advantage</span><i>{L.mapen != null ? `${fmtPct(L.mapen, 0)} of Medicare days are MA` : 'No MA days reported'}; Medicaid {fmtPct(L.mcdsh, 0)}</i></div>}
         {L.age != null && <div className="hp-kpi"><b>{L.age.toFixed(1)} years</b><span>average age of plant</span><i>Accumulated depreciation over annual depreciation, all members</i></div>}
