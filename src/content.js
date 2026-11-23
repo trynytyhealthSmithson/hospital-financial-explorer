@@ -4,6 +4,12 @@ export const DATA_RELEASE = {
 };
 export const RELEASE_NOTES = [
   {
+    version: 'Beta 2.7', date: 'November 2026', items: [
+      'Health systems reflect confirmed sales since the 2023 AHRQ list, from the CMS change of ownership file: nine Community Health Systems hospitals sold in 2023 to 2025 leave its totals after the year of sale, and those bought by INTEGRIS, AdventHealth, Duke and UMMC join them. System pages list hospitals sold and joined.',
+      'System pages split the Medicare card into Medicare share of all inpatient days and MA share of Medicare days, show the Medicare margin and the MA days on separate charts, explain how the Medicare inpatient margin is calculated, and make the first year of each chart easier to hover.',
+    ],
+  },
+  {
     version: 'Beta 2.6', date: 'November 2026', items: [
       'Every cost report now counts: when a hospital has several reports in one CMS file year, all are added together (50 to 90 hospitals a year had a report left out before). Years covering more than 13.5 months are flagged and left out of peer comparisons.',
       'System, state and county totals use one set of reports for net patient revenue, net income and both combined margins: every report without a data problem, including part-year reports, with years over 13.5 months scaled to 12.',
