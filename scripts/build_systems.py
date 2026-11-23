@@ -43,6 +43,36 @@ for sid, s in sysd.items():
 # Hospitals missing from the 2023 linkage (most opened or changed hands since) join a system when the home office on
 # their own cost report (HCRIS Worksheet S-2, from build_hcris.py) belongs to that system: at least 80% of the
 # hospitals filing under that home office that are in the linkage, and at least two of them, are in the one system.
+# Confirmed sales since the AHRQ 2023 linkage, from the CMS Hospital Change of Ownership file (new owner outside the
+# system). The hospital leaves the seller from the cost report year after the sale and joins the buyer when the buyer
+# is a system here. ccn: (effective date, new owner as CMS lists it, seller system, buyer system or None)
+EXITS = {
+    '100071': ('2023-12-01', 'Tampa General Hospital Hernando LLC', 'S17773305', None),
+    '100249': ('2023-12-01', 'Tampa General Hospital Citrus LLC', 'S17773305', None),
+    '370002': ('2023-11-01', 'INTEGRIS Health Woodward Hospital Inc', 'S17773305', 'S17774097'),
+    '370006': ('2023-11-01', 'INTEGRIS Health Ponca City Hospital Inc', 'S17773305', 'S17774097'),
+    '440185': ('2024-08-01', 'Bradley Medical Center LLC', 'S17773305', None),
+    '344036': ('2024-10-01', 'Iredell Memorial Hospital Inc', 'S17773305', None),
+    '100077': ('2025-03-01', 'AdventHealth Port Charlotte Inc', 'S17773305', 'S17773293'),
+    '340129': ('2025-04-01', 'Duke Health Lake Norman Regional Medical Center Inc', 'S17773305', 'S17773795'),
+    '250038': ('2025-05-01', 'State of Mississippi, University of Mississippi Medical Center', 'S17773305', 'S18265811'),
+}
+def sys_in_year(c, y, cur):
+    # The system a hospital's report counts toward in cost report year y: the seller through the year of the sale
+    e = EXITS.get(c)
+    if not e: return cur
+    return e[2] if int(y) <= int(e[0][:4]) else e[3]
+for c, (dt, owner, seller, buyer) in EXITS.items():
+    if c not in idx or seller not in sysd: continue
+    sysd[seller]['h'] = [x for x in sysd[seller]['h'] if x != c]
+    sysd[seller].setdefault('gone', []).append([c, dt, owner, buyer])
+    if buyer and buyer in sysd:
+        sysd[buyer]['h'] = sorted(set(sysd[buyer]['h']) | {c}); sysd[buyer].setdefault('joined', []).append([c, dt, seller])
+        H[idx[c]]['sy'] = buyer
+    else: H[idx[c]].pop('sy', None)
+for sy in sysd.values():
+    sy['st'] = sorted({H[idx[c]]['s'] for c in sy['h'] if H[idx[c]]['s']})
+
 HX = OUT / 'hcris_idx.json'
 added = 0
 if HX.exists():
@@ -51,7 +81,7 @@ if HX.exists():
     for c, o in ho.items():
         if c in idx and H[idx[c]].get('sy'): by_ho[o][H[idx[c]]['sy']] += 1
     for c, o in sorted(ho.items()):
-        if c not in idx or H[idx[c]].get('sy') or not by_ho.get(o): continue
+        if c not in idx or c in EXITS or H[idx[c]].get('sy') or not by_ho.get(o): continue
         sid, n = by_ho[o].most_common(1)[0]
         if n >= 2 and n / sum(by_ho[o].values()) >= 0.8:
             sysd[sid]['h'] = sorted(sysd[sid]['h'] + [c]); sysd[sid].setdefault('hx', []).append(c)
@@ -79,7 +109,7 @@ def rollup(rows):
 for y in meta['years']:
     Y = json.load(open(OUT / 'year' / f'{y}.json')); F = Y['fields']; by = defaultdict(list)
     for row in Y['rows']:
-        r = dict(zip(F, row)); sid = H[r['i']].get('sy')
+        r = dict(zip(F, row)); sid = sys_in_year(H[r['i']]['c'], y, H[r['i']].get('sy'))
         if sid: by[sid].append(r)
     for sid, L in by.items(): sysd[sid].setdefault('y', {})[str(y)] = rollup(L)
 # Measures from the full cost report files (build_hcris.py), pooled across member hospitals
@@ -92,9 +122,11 @@ if HD.exists():
         for c, v in json.load(open(f)).items():
             for y, r in v.get('years', {}).items(): dep[(c, y)] = r.get('dep')
     for sid, sy in sysd.items():
-        for y in sorted({y for c in sy['h'] for y in hc.get(c, {})}):
+        cand = sorted(set(sy['h']) | {g[0] for g in sy.get('gone', [])})
+        for y in sorted({y for c in cand for y in hc.get(c, {})}):
             t = Counter()
-            for c in sy['h']:
+            for c in cand:
+                if sys_in_year(c, y, sid if c in sy['h'] else None) != sid: continue
                 o = hc.get(c, {}).get(y)
                 if not o: continue
                 if o.get('pd') and o['pd'][4]:

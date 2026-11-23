@@ -5,7 +5,8 @@ import UsMap, { SeqLegend, unionBounds, padBounds } from './UsMap';
 import { titleCase, countyTitle } from './HospitalMap';
 import { loadOwnership, loadAco, MSSP_URL, PHYS_URL, load340b, loadOpIdx, loadHcrisIdx, loadSystems, loadHospitals, loadYear, loadGeo, loadMarketsMeta, loadMkt, loadSL, quantileBreaks, colorFor, fmtInt, fmtPct, fmtUsdM, crYearLong } from '../data';
 
-const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then.';
+const fmtMonth = d => new Date(d + 'T00:00:00').toLocaleString('en-US', { month: 'long', year: 'numeric' });
+const NOTE = 'Systems come from the AHRQ Compendium of U.S. Health Systems, 2023: hospitals are grouped by their corporate parent. Membership is as of 2023 and is applied to every year, so earlier years show today’s systems, not the ones that existed then. Confirmed sales since 2023 in the CMS Hospital Change of Ownership file are the exception: the hospital leaves the seller from the cost report year after the sale, and joins the buyer when the buyer is a system here.';
 
 export function SystemList({ meta }) {
   const [S, setS] = useState(null), [q, setQ] = useState(''), [sort, setSort] = useState('npr');
@@ -79,14 +80,17 @@ export function SystemPage({ id, meta }) {
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, margin: '4px 0', color: 'var(--navy)' }}>{sys.n}</h1>
         <div style={{ fontSize: 13, display: 'flex', gap: 14, flexWrap: 'wrap' }}><a href="#systems">All health systems</a>{sys.h.length <= 5 && <a href={`#compare/${sys.h.join(',')}`}>Compare its hospitals</a>}<a href={`${PHYS_URL}/#sys/${id}`} target="_blank" rel="noreferrer">Aligned physician groups and consolidation</a></div>
         {sys.nt && <p className="cm-note" style={{ marginTop: 8 }}>{sys.nt}</p>}
+        {sys.gone && <p className="cm-note" style={{ marginTop: 8 }}>Sold since the 2023 AHRQ list (CMS change of ownership file): {sys.gone.map(([c, dt, owner, to], i) => <React.Fragment key={c}>{i ? '; ' : ''}<a href={`#h/${c}`}>{byC[c] ? titleCase(byC[c].n) : c}</a> to {to && S[to] ? <a href={`#sys/${to}`}>{S[to].n}</a> : titleCase(owner)}, {fmtMonth(dt)}</React.Fragment>)}. Each counts in this system through the cost report year of its sale.</p>}
+        {sys.joined && <p className="cm-note" style={{ marginTop: 8 }}>Joined since the 2023 AHRQ list (CMS change of ownership file): {sys.joined.map(([c, dt, from], i) => <React.Fragment key={c}>{i ? '; ' : ''}<a href={`#h/${c}`}>{byC[c] ? titleCase(byC[c].n) : c}</a> from {S[from] ? <a href={`#sys/${from}`}>{S[from].n}</a> : 'another owner'}, {fmtMonth(dt)}</React.Fragment>)}. Each counts in this system from the cost report year after its purchase.</p>}
       </div>
       <div className="hp-grid" style={{ marginBottom: 14 }}>
         <div className="hp-kpi"><b>{fmtUsdM(L.npr)}</b><span>net patient revenue, {Ly} cost report year</span><i>{fmtInt(L.beds)} beds, {fmtInt(L.dis)} discharges</i></div>
         <div className="hp-kpi"><b style={{ color: L.tm < 0 ? 'var(--red)' : undefined }}>{fmtPct(L.tm)}</b><span>combined total margin</span><i>Median member hospital {fmtPct(L.tm_med)}</i></div>
         <div className="hp-kpi"><b>{fmtPct(L.pm)}</b><span>combined patient service margin</span></div>
         <div className="hp-kpi"><b>{fmtUsdM(L.ni)}</b><span>net income of member hospitals</span><i>From hospital cost reports; system-level items are not included{L.nx ? `. Leaves out ${L.nx} ${L.nx === 1 ? 'report' : 'reports'} with a data problem` : ''}{L.nl ? `; ${L.nl} ${L.nl === 1 ? 'report covering' : 'reports covering'} more than 13.5 months scaled to 12` : ''}</i></div>
-        {L.mmm != null && <div className="hp-kpi"><b style={{ color: L.mmm < 0 ? 'var(--red)' : 'var(--teal-dark)' }}>{fmtPct(L.mmm)}</b><span>Medicare fee-for-service inpatient margin</span><i>{L.mmn} inpatient PPS {L.mmn === 1 ? 'hospital' : 'hospitals'}{HX && HX.meta.mm_margin[Ly] != null ? `; all PPS hospitals ${fmtPct(HX.meta.mm_margin[Ly])}` : ''}</i></div>}
-        {L.mall != null && <div className="hp-kpi"><b>{fmtPct(L.mall, 0)}</b><span>of inpatient days are Medicare, including Medicare Advantage</span><i>{L.mapen != null ? `${fmtPct(L.mapen, 0)} of Medicare days are MA` : 'No MA days reported'}; Medicaid {fmtPct(L.mcdsh, 0)}</i></div>}
+        {L.mmm != null && <div className="hp-kpi"><b style={{ color: L.mmm < 0 ? 'var(--red)' : 'var(--teal-dark)' }}>{fmtPct(L.mmm)}</b><span>Medicare fee-for-service inpatient margin</span><i title="Medicare inpatient PPS operating and capital payments (Worksheet E Part A, lines 47 and 50) minus Medicare inpatient cost (Worksheet D-1 Part II, line 49), over those payments, summed across member hospitals">{L.mmn} inpatient PPS {L.mmn === 1 ? 'hospital' : 'hospitals'}{HX && HX.meta.mm_margin[Ly] != null ? `; all PPS hospitals ${fmtPct(HX.meta.mm_margin[Ly])}` : ''}</i></div>}
+        {L.mall != null && <div className="hp-kpi"><b>{fmtPct(L.mall, 0)}</b><span>of all inpatient days are Medicare (fee-for-service and Medicare Advantage)</span><i>Medicaid {fmtPct(L.mcdsh, 0)} of all inpatient days</i></div>}
+        {L.mall != null && <div className="hp-kpi"><b>{L.mapen != null ? fmtPct(L.mapen, 0) : 'n/a'}</b><span>of Medicare inpatient days are Medicare Advantage</span><i>{L.mapen != null ? 'Member hospitals that report MA days' : 'No MA days reported'}</i></div>}
         {L.age != null && <div className="hp-kpi"><b>{L.age.toFixed(1)} years</b><span>average age of plant</span><i>Accumulated depreciation over annual depreciation, all members</i></div>}
         {B3 && <div className="hp-kpi"><b>{sys.h.filter(c => B3.h[c] && B3.h[c][2]).length} of {sys.h.length}</b><span>member hospitals in 340B</span><i>{fmtInt(sys.h.reduce((t, c) => t + (B3.h[c] && B3.h[c][2] ? B3.h[c][4] : 0), 0))} contract pharmacy arrangements across them</i></div>}
         {AC && <div className="hp-kpi"><b>{sys.h.filter(c => acoOf(c).length).length} of {sys.h.length}</b><span>member hospitals found in an MSSP ACO, program year {AC.meta.latest}</span><i>{acos.length ? acos.slice(0, 3).map(a => `${a.n} (${a.k})`).join('; ') : 'None matched by name'}</i></div>}
@@ -96,7 +100,7 @@ export function SystemPage({ id, meta }) {
         <ChartCard title="Margins over time" sub="Combined total margin of member hospitals (revenue-weighted) and the median member hospital." filename={`system-${id}-margins`}
           csv={() => [['year', 'combined_total_margin_pct', 'median_hospital_margin_pct', 'net_patient_revenue_billions'], ...trend.map(t => [t.y, t.tm, t.med, t.npr])]}>
           <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={trend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-            <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
+            <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} padding={{ left: 14, right: 14 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
             <Line dataKey="tm" name="Combined total margin" stroke="var(--teal-dark)" strokeWidth={2.4} /><Line dataKey="med" name="Median member hospital" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.6} />
           </LineChart></ResponsiveContainer></div>
         </ChartCard>
@@ -105,16 +109,26 @@ export function SystemPage({ id, meta }) {
           <div style={{ overflow: 'auto', maxHeight: 240 }}><table className="cm-table"><tbody>{lines.sort((a, b) => b.d - a.d).map(r => <tr key={r.k}><td>{MM.sl[r.k]}</td><td className="n">{fmtInt(r.d)}</td><td className="n">{fmtPct(r.mix)}</td></tr>)}</tbody></table></div>
         </ChartCard>
       </div>
-      {mtrend.some(t => t.mmm != null || t.mapen != null) && <ChartCard title="Medicare over time" style={{ marginTop: 14 }} filename={`system-${id}-medicare`}
-        sub="Combined Medicare fee-for-service inpatient margin of member hospitals, the all-hospital margin, and the Medicare Advantage share of Medicare inpatient days, from the full cost report files."
-        csv={() => [['year', 'system_medicare_inpatient_margin_pct', 'all_pps_hospitals_margin_pct', 'ma_share_of_medicare_days_pct', 'medicare_share_of_days_pct'], ...mtrend.map(t => [t.y, t.mmm, t.nat, t.mapen, t.mall])]}>
-        <div style={{ height: 250 }}><ResponsiveContainer><LineChart data={mtrend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-          <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
-          <Line dataKey="mmm" name="Medicare inpatient margin" stroke="var(--teal-dark)" strokeWidth={2.4} />
-          <Line dataKey="nat" name="All PPS hospitals" stroke="var(--slate)" strokeWidth={1.4} dot={false} />
-          <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} />
-        </LineChart></ResponsiveContainer></div>
-      </ChartCard>}
+      {mtrend.some(t => t.mmm != null || t.mapen != null) && <div className="cm-grid" style={{ marginTop: 14 }}>
+        <ChartCard title="Medicare inpatient margin over time" filename={`system-${id}-medicare-margin`}
+          sub="Medicare fee-for-service inpatient margin of member hospitals combined, and of all inpatient PPS hospitals: PPS operating and capital payments (Worksheet E Part A) minus Medicare inpatient cost (Worksheet D-1), over payments."
+          csv={() => [['year', 'system_medicare_inpatient_margin_pct', 'all_pps_hospitals_margin_pct'], ...mtrend.map(t => [t.y, t.mmm, t.nat])]}>
+          <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={mtrend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+            <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} padding={{ left: 14, right: 14 }} /><YAxis tick={{ fontSize: 11 }} unit="%" /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line dataKey="mmm" name="This system" stroke="var(--teal-dark)" strokeWidth={2.4} />
+            <Line dataKey="nat" name="All PPS hospitals" stroke="var(--slate)" strokeWidth={1.4} />
+          </LineChart></ResponsiveContainer></div>
+        </ChartCard>
+        <ChartCard title="Medicare and Medicare Advantage days over time" filename={`system-${id}-medicare-days`}
+          sub="Medicare share of all inpatient days (fee-for-service and MA), and the MA share of Medicare inpatient days, from Worksheet S-3."
+          csv={() => [['year', 'medicare_share_of_all_days_pct', 'ma_share_of_medicare_days_pct'], ...mtrend.map(t => [t.y, t.mall, t.mapen])]}>
+          <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={mtrend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+            <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} padding={{ left: 14, right: 14 }} /><YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line dataKey="mall" name="Medicare share of all days" stroke="var(--teal-dark)" strokeWidth={2.2} />
+            <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} />
+          </LineChart></ResponsiveContainer></div>
+        </ChartCard>
+      </div>}
       {opl.length > 0 && <ChartCard title={`Outpatient procedures, ${OP.meta.latest}`} style={{ marginTop: 14 }} csvName={`system-${id}-outpatient`}
         sub="Original Medicare outpatient procedures and observation stays at member hospitals (comprehensive APCs), with the change since 2019. Critical access hospitals are not in the file."
         csv={() => [['service_line', 'services_2019', `services_${OP.meta.latest}`, 'medicare_payment'], ...opl.map(r => [r.l, r.s0, r.s, r.p])]}>
