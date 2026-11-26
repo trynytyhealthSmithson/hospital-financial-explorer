@@ -125,7 +125,7 @@ export function SystemPage({ id, meta }) {
           <div style={{ height: 240 }}><ResponsiveContainer><LineChart data={mtrend} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid stroke="#eef1f5" vertical={false} /><XAxis dataKey="y" tick={{ fontSize: 11 }} padding={{ left: 14, right: 14 }} /><YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} /><Tooltip formatter={v => v + '%'} /><Legend wrapperStyle={{ fontSize: 11 }} />
             <Line dataKey="mall" name="Medicare share of all days" stroke="var(--teal-dark)" strokeWidth={2.2} />
-            <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} />
+            <Line dataKey="mapen" name="MA share of Medicare days" stroke="var(--navy)" strokeDasharray="4 3" strokeWidth={1.8} dot={{ strokeDasharray: '0', r: 3 }} />
           </LineChart></ResponsiveContainer></div>
         </ChartCard>
       </div>}
